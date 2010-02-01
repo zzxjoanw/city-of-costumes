@@ -1,0 +1,33 @@
+@charset "utf-8";
+/* CSS Document */
+
+body { background-color:#ebf4fa; }
+a { text-decoration:none; color:#ebf4fa; }
+a:hover { font-weight:bold; }
+
+#userInfo
+{
+	background-color:#54a4de;
+	border:#206ba4 solid 3px;
+	height:75px;
+}
+
+#userInfo .left
+{
+	position:absolute;
+	left:15px;
+}
+
+#userInfo .right
+{
+	position:absolute;
+	right:15px;
+}
+
+#contentFrame
+{}
+
+.type
+{
+	background-color:#ebf4fa;
+}
