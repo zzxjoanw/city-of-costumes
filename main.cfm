@@ -8,6 +8,8 @@
 <cfparam name="session.css" default="hero">
 
 <cfparam name="form.userGlobal" default="">
+<cfparam name="form.costumeGender" default="">
+
 <cfparam name="form.bttnRegSubmit" default="">
 <cfparam name="form.bttnLoginSubmit" default="">
 <cfparam name="form.bttnNewSubmit" default="">
@@ -39,16 +41,27 @@
 </cfif>
 
 <cfif #form.bttnNewSubmit# eq "Submit"> <!--- Costume form submitted by a logged-in user --->
+	<cfif #form.costumeFile# eq "" OR #form.costumeGender# eq "" OR #form.costumeName# eq "" OR #form.costumeDescription# eq "">
+        <cfset form.bttnNewSubmit = "">
+    </cfif>
+    
 	<cfif #session.isLoggedIn# eq "true">
-        <cffile action = "upload" fileField = "costumeFile" destination = "costumes/" nameConflict = "error" accept = "application/octet-stream">
-        <cfoutput>ext: #cffile.serverFileExt#</cfoutput>
-		<cfquery name="qAddCostume" datasource="cocdata">
-        	INSERT INTO tblCostume
-    	</cfquery>
+    	<cftry>
+	        <cffile action = "upload" fileField = "costumeFile" destination = "c:/coldfusion8/wwwroot/portfolio_site/city-of-costumes/costumes" nameConflict = "overwrite" accept = "application/octet-stream">
+	        <cfcatch>
+    	    	No file selected<br />
+        	</cfcatch>
+        </cftry>
+
+			<cfquery name="qAddCostume" datasource="cocdata">
+    	    	INSERT INTO tblCostumes (userName, costumeFile, costumeGender, costumeName)
+        	    VALUES ('#session.userName#','#form.costumeFile#','#form.costumeGender#','#form.costumeName#')
+	    	</cfquery>
+
     </cfif>
 <cfelseif #form.bttnNewSubmitAnon# eq "Submit"> <!--- Costume form submitted by a non-logged-in user --->
-	<cfquery name="qAddCostumeAnon" datasource="cocdata">
-    </cfquery>
+<!---	<cfquery name="qAddCostumeAnon" datasource="cocdata">
+    </cfquery>--->
 </cfif>
 
 <!--- set the menu --->
@@ -108,8 +121,8 @@
             	<cfif #form.bttnLoginSubmit# eq ""> <!--- login form --->
 	            	<cfform name="" action="main.cfm?action=login" method="post">
     	            	<table>
-        	            	<tr><td>Account Name:</td><td><cfinput type="text" name="userGlobal" value="@"></td></tr>
-            	            <tr><td>Password:</td><td><cfinput type="text" name="userPassword"></td></tr>
+        	            	<tr><td>Account Name:</td><td><cfinput type="text" name="userGlobal" value="@Black Orchid II"></td></tr>
+            	            <tr><td>Password:</td><td><cfinput type="text" name="userPassword" value="kyria"></td></tr>
                 	        <tr><td colspan="3"><cfinput type="submit" value="Submit" name="bttnLoginSubmit"></td></tr>
                     	</table>
 	                </cfform>
@@ -140,7 +153,7 @@
 					<cfform name="" action="main.cfm?action=new" method="post" enctype="multipart/form-data">
     	   	           	<table border="0">
                         	<tr><td>Upload Costume File:</td><td><input type="file" name="costumeFile" value="" />
-        	   	          	<tr><td>Gender</td><td><input type="radio" name="gender" value="male" /> Male <input type="radio" name="gender" value="female" /> Female <input type="radio" name="gender" value="huge" /> Huge </td></tr>
+        	   	          	<tr><td>Gender</td><td><input type="radio" name="costumeGender" value="male" /> Male <input type="radio" name="costumeGender" value="female" /> Female <input type="radio" name="costumeGender" value="huge" /> Huge </td></tr>
             	   	        <tr><td>Costume Name</td><td><input type="text" name="costumeName" value="" /></td></tr>
                 	   		<tr><td valign="top">Description</td><td><textarea name="costumeDescription" rows="5" cols="50"></textarea></td></tr>
 		            		<cfif #session.isLoggedIn# eq "true"> <!--- is user logged in? --->
