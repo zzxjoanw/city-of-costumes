@@ -1,7 +1,8 @@
 <!--- variable defs --->
+
 <cfparam name="title" default="City of Costumes::Home">
 <cfparam name="message" default="">
-<cfparam name="rootDir" default="file://c:/coldfusion8/wwwroot/portfolio_site/city-of-costumes">
+<cfparam name="rootDir" default="c:/coldfusion8/wwwroot/portfolio_site/city-of-costumes">
 
 <cfparam name="url.action" default="">
 
@@ -52,6 +53,11 @@
 	SELECT * FROM tblCostumes WHERE costumeName = '#form.searchByName#';
 </cfquery>
 
+<!--- my costumes query --->
+<cfquery name="qViewMyCostumes" datasource="cocdata">
+	SELECT * FROM tblCostumes WHERE userName = '#session.userName#';
+</cfquery>
+
 <!--- add tags to db --->
 <!---
 <cfif #form.costumeTags# neq "">
@@ -71,23 +77,36 @@
     </cfif>
     
 	<cfif #session.isLoggedIn# eq "true">
-    	<cftry>
+		<cftry>
 	        <cffile action="upload" fileField="costumeFile" destination="#rootDir#/costumes" nameConflict="overwrite" accept="application/octet-stream">
 	        <cfcatch><cfset message &= "Costume file upload failed<br />"></cfcatch>
         </cftry>
         
         <cftry>
-        	<cffile action="upload" filefield="costumeImageFile" destination="#rootDir#/images" nameconflict="overwrite" accept="image/jpg">
-            <cfcatch><cfset message &= "Image upload failed<br />"></cfcatch>
+        	<cffile action="upload" filefield="costumeImageFile" destination="#rootDir#/images" nameconflict="overwrite" accept="image/jpeg">
+            <cfif isdefined("cfcatch.MimeType")>
+            </cfif>
+            <cfcatch><cfset message &= "Image upload failed: <br />">
+            	<cfoutput>#cfcatch.MimeType#<br></cfoutput>
+            </cfcatch>
         </cftry>
+		
+        <cfif form.costumeGender eq "">
+        	<cfset message &= "no gender<br>">
+        </cfif>
+        <cfif form.costumeName eq "">
+        	<cfset message &= "no name<br>">
+        </cfif>
+        <cfif form.costumeDescription eq "">
+        	<cfset message &= "no desc<br>">
+        </cfif>
+		
 
-		<cftry>
 			<cfquery name="qAddCostume" datasource="cocdata">
-   		    	INSERT INTO tblCostumes (userName, costumeFile, costumeGender, costumeName, costumeDescription)
-       		    VALUES ('#session.userName#','#form.costumeFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#')
+   		    	INSERT INTO tblCostumes (userName, costumeFile, costumeImageFile, costumeGender, costumeName, costumeDescription)
+       		    VALUES ('#session.userName#','#form.costumeFile#','#costumeImageFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#')
 	    	</cfquery>
-			<cfcatch><cfset message &= "One or more fields were not filled out"></cfcatch>
-        </cftry>
+
     </cfif>
 
 <cfelseif #form.bttnNewSubmitAnon# eq "Submit"> <!--- Costume form submitted by a non-logged-in user --->
@@ -117,8 +136,8 @@
 
 <!--- set the menu --->
 <cfif #session.isLoggedIn# eq "true">
-	<cfset menuText = "[ <a href='main.cfm?action=logout'>Logout</a> | <a href='main.cfm?action=new'>Add New Costume</a> | View My Costumes |
-						<a href='main.cfm?action=search'>Search</a> | Change Style ]">
+	<cfset menuText = "[ <a href='main.cfm?action=logout'>Logout</a> | <a href='main.cfm?action=new'>Add New Costume</a> | 
+						<a href='main.cfm?action=view'>View My Costumes</a> | <a href='main.cfm?action=search'>Search</a> ]">
 <cfelse>
 	<cfset menuText = "[ <a href='main.cfm?action=register'>Register</a> | <a href='main.cfm?action=login'>Login</a> | 
 						<a href='main.cfm?action=new'>Add New Costume</a> | <a href='main.cfm?action=search'>Search</a> ]">
@@ -266,6 +285,7 @@
 	        </cfcase>
 <!--- end new costume section --->
 
+<!--- search section--->
             <cfcase value="search">
             	<cfif bttnSubmitSearch eq "">
 	            	<cfform name="" action="main.cfm?action=search" method="post">
@@ -286,6 +306,7 @@
 
             <cfcase value="style">
             </cfcase>
+<!--- end seearch section --->
 
 <!--- logout section --->
 			<cfcase value="logout">
@@ -293,6 +314,17 @@
                 <cfset session.isLoggedIn = "false">
             </cfcase>
 <!--- end logout section --->
+
+<!--- view my costumes --->
+			<cfcase value="view">
+                	<table>
+                    	<tr><td>ID</td><td>Username</td><td>file</td><td>Gender</td><td>Reqs</td><td>Name</td><td>Image</td></tr>
+	                	<cfoutput query="qViewMyCostumes">
+    	                	<tr><td>#costumeID#</td><td>#userName#</td><td>#costumeFile#</td><td>#costumeGender#</td><td>#costumeRequirements#</td><td>#costumeName#</td><td>#costumeImageFile#</td></tr>
+        	            </cfoutput>
+	                </table>
+            </cfcase>
+<!--- end of view section --->
 
 <!--- start page -- display a random costume --->
             <cfdefaultcase>
