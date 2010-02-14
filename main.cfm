@@ -1,5 +1,7 @@
+<!--- variable defs --->
 <cfparam name="title" default="City of Costumes::Home">
 <cfparam name="message" default="">
+<cfparam name="rootDir" default="file://c:/coldfusion8/wwwroot/portfolio_site/city-of-costumes">
 
 <cfparam name="url.action" default="">
 
@@ -9,11 +11,15 @@
 
 <cfparam name="form.userGlobal" default="">
 <cfparam name="form.costumeGender" default="">
+<cfparam name="form.costumeImageFile" default="">
+<cfparam name="form.costumeTags" default="">
+<cfparam name="form.searchByName" default="">
 
 <cfparam name="form.bttnRegSubmit" default="">
 <cfparam name="form.bttnLoginSubmit" default="">
 <cfparam name="form.bttnNewSubmit" default="">
 <cfparam name="form.bttnNewSubmitAnon" default="">
+<cfparam name="form.bttnSubmitSearch" default="">
 
 <cfif #form.bttnLoginSubmit# eq "Submit"> <!--- login form submitted --->
 	<cfquery name="qLogin" datasource="cocdata">
@@ -22,6 +28,7 @@
     <cfif #qLogin.userPassword# eq #form.userPassword#>
     	<cfset session.userName = #qLogin.userGlobal#>
         <cfset session.isLoggedIn = "true">
+        <cflocation url="main.cfm">
 	</cfif>
 </cfif>
 
@@ -40,36 +47,81 @@
 	</cfif>
 </cfif>
 
+<!--- search query --->
+<cfquery name="qSearchByCostumeName" datasource="cocdata">
+	SELECT * FROM tblCostumes WHERE costumeName = '#form.searchByName#';
+</cfquery>
+
+<!--- add tags to db --->
+<!---
+<cfif #form.costumeTags# neq "">
+	<cfset costumeTagList = ListToArray(form.costumeTags,',',false)>
+    <cfloop index="i" from="0" to="ArrayLen(costumeTagList)">
+    	<cfquery name="qAddTag" datasource="cocdata">
+        	INSERT INTO tblTags ()
+            VALUES ()
+        </cfquery>
+    </cfloop>
+</cfif>--->
+
 <cfif #form.bttnNewSubmit# eq "Submit"> <!--- Costume form submitted by a logged-in user --->
-	<cfif #form.costumeFile# eq "" OR #form.costumeGender# eq "" OR #form.costumeName# eq "" OR #form.costumeDescription# eq "">
+	<cfset message = "">
+	<cfif #form.costumeFile# eq "" OR #form.costumeImageFile# eq "" OR #form.costumeGender# eq "" OR #form.costumeName# eq "" OR #form.costumeDescription# eq "">
         <cfset form.bttnNewSubmit = "">
     </cfif>
     
 	<cfif #session.isLoggedIn# eq "true">
     	<cftry>
-	        <cffile action = "upload" fileField = "costumeFile" destination = "c:/coldfusion8/wwwroot/portfolio_site/city-of-costumes/costumes" nameConflict = "overwrite" accept = "application/octet-stream">
-	        <cfcatch>
-    	    	No file selected<br />
-        	</cfcatch>
+	        <cffile action="upload" fileField="costumeFile" destination="#rootDir#/costumes" nameConflict="overwrite" accept="application/octet-stream">
+	        <cfcatch><cfset message &= "Costume file upload failed<br />"></cfcatch>
+        </cftry>
+        
+        <cftry>
+        	<cffile action="upload" filefield="costumeImageFile" destination="#rootDir#/images" nameconflict="overwrite" accept="image/jpg">
+            <cfcatch><cfset message &= "Image upload failed<br />"></cfcatch>
         </cftry>
 
+		<cftry>
 			<cfquery name="qAddCostume" datasource="cocdata">
-    	    	INSERT INTO tblCostumes (userName, costumeFile, costumeGender, costumeName)
-        	    VALUES ('#session.userName#','#form.costumeFile#','#form.costumeGender#','#form.costumeName#')
+   		    	INSERT INTO tblCostumes (userName, costumeFile, costumeGender, costumeName, costumeDescription)
+       		    VALUES ('#session.userName#','#form.costumeFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#')
 	    	</cfquery>
-
+			<cfcatch><cfset message &= "One or more fields were not filled out"></cfcatch>
+        </cftry>
     </cfif>
+
 <cfelseif #form.bttnNewSubmitAnon# eq "Submit"> <!--- Costume form submitted by a non-logged-in user --->
-<!---	<cfquery name="qAddCostumeAnon" datasource="cocdata">
-    </cfquery>--->
+	<cfset message = "">
+   	<cfif #form.costumeFile# eq "" OR #form.costumeImageFile# eq "" OR #form.costumeGender# eq "" OR #form.costumeName# eq "" OR #form.costumeDescription# eq "">
+        <cfset form.bttnNewSubmitAnon = "">
+    </cfif>
+    
+   	<cftry>
+        <cffile action="upload" fileField="costumeFile" destination="#rootDir#/costumes" nameConflict="overwrite" accept="application/octet-stream">
+        <cfcatch><cfset message &= "Costume file upload failed<br />"></cfcatch>
+    </cftry>
+        
+    <cftry>
+       	<cffile action="upload" filefield="costumeImageFile" destination="#rootDir#/images" nameconflict="overwrite" accept="image/jpg">
+        <cfcatch><cfset message &= "Image upload failed<br />"></cfcatch>
+    </cftry>
+
+	<cftry>
+		<cfquery name="qAddCostumeAnon" datasource="cocdata">
+	    	INSERT INTO tblCostumes (userName, costumeFile, costumeGender, costumeName, costumeDescription)
+   		    VALUES ('','#form.costumeFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#')
+    	</cfquery>
+		<cfcatch><cfset message &= "One or more fields were not filled out"></cfcatch>
+    </cftry>
 </cfif>
 
 <!--- set the menu --->
 <cfif #session.isLoggedIn# eq "true">
-	<cfset menuText = "[ <a href='main.cfm?action=logout'>Logout</a> | <a href='main.cfm?action=new'>Add New Costume</a> | View My Costumes | Search | Change Style ]">
+	<cfset menuText = "[ <a href='main.cfm?action=logout'>Logout</a> | <a href='main.cfm?action=new'>Add New Costume</a> | View My Costumes |
+						<a href='main.cfm?action=search'>Search</a> | Change Style ]">
 <cfelse>
 	<cfset menuText = "[ <a href='main.cfm?action=register'>Register</a> | <a href='main.cfm?action=login'>Login</a> | 
-						<a href='main.cfm?action=new'>Add New Costume</a> | Search ]">
+						<a href='main.cfm?action=new'>Add New Costume</a> | <a href='main.cfm?action=search'>Search</a> ]">
 </cfif>
 
 <!--- set the title --->
@@ -92,10 +144,43 @@
 </cfswitch>
 
 
+<!--- display a random costume --->
+<cfquery datasource="cocdata" name="qGetRandomCostume">
+	SELECT costumeID FROM tblCostumes;
+</cfquery>
+                
+<cfif qGetRandomCostume.recordCount>
+	<cfset showNum = 1>
+	<cfset itemList = "">
+					
+	<cfloop from="1" to="#qGetRandomCostume.recordCount#" index="i">
+		<cfset itemList = ListAppend(itemList, i)>
+	</cfloop>
+					
+	<cfset randomItems = "">
+	<cfset itemCount = listLen(itemList)>
+					
+	<cfloop from="1" to="#itemCount#" index="i">
+		<cfset random = ListGetAt(itemList, RandRange(1, itemCount))>
+		<cfset randomItems = ListAppend(randomItems, random)>
+		<cfset itemList = ListDeleteAt(itemList, ListFind(itemList, random))>
+		<cfset itemCount = ListLen(itemList)>
+	</cfloop>
+					
+	<cfloop from="1" to="#showNum#" index="i">
+		<cfset randCostumeNum = #qGetRandomCostume.costumeID[ListGetAt(randomItems, i)]#>
+	</cfloop>
+                    
+	<cfquery datasource="cocdata" name="qGetRandomCostumeByID">
+		SELECT * FROM tblCostumes WHERE costumeID = #randCostumeNum#;
+	</cfquery>
+</cfif>
+
+<!--- parse a costume file for reqs --->
 
 
-
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!--- clientside output --->
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -110,7 +195,11 @@
 
 <body>
 	<div id="userInfo">
-    	<span class="left"><cfoutput>Welcome, #session.userName#!</cfoutput></span>
+    	<cfif #session.userName# eq "">
+        	<span class="left"><cfoutput>Welcome, Guest!</cfoutput></span>
+        <cfelse>
+	    	<span class="left"><cfoutput>Welcome, #session.userName#!</cfoutput></span>
+        </cfif>
         <span class="right"><cfoutput>#menuText#</cfoutput></span>
     </div>
     <div id="contentFrame">
@@ -121,8 +210,8 @@
             	<cfif #form.bttnLoginSubmit# eq ""> <!--- login form --->
 	            	<cfform name="" action="main.cfm?action=login" method="post">
     	            	<table>
-        	            	<tr><td>Account Name:</td><td><cfinput type="text" name="userGlobal" value="@Black Orchid II"></td></tr>
-            	            <tr><td>Password:</td><td><cfinput type="text" name="userPassword" value="kyria"></td></tr>
+        	            	<tr><td>Account Name:</td><td><cfinput type="text" name="userGlobal" value=""></td></tr>
+            	            <tr><td>Password:</td><td><cfinput type="text" name="userPassword" value=""></td></tr>
                 	        <tr><td colspan="3"><cfinput type="submit" value="Submit" name="bttnLoginSubmit"></td></tr>
                     	</table>
 	                </cfform>
@@ -149,13 +238,23 @@
 
 <!--- new costume section --->
             <cfcase value="new">
+            	<cfoutput>#message#</cfoutput>
             	<cfif #form.bttnNewSubmit# eq "" OR #form.bttnNewSubmitAnon# eq "">
 					<cfform name="" action="main.cfm?action=new" method="post" enctype="multipart/form-data">
     	   	           	<table border="0">
                         	<tr><td>Upload Costume File:</td><td><input type="file" name="costumeFile" value="" />
-        	   	          	<tr><td>Gender</td><td><input type="radio" name="costumeGender" value="male" /> Male <input type="radio" name="costumeGender" value="female" /> Female <input type="radio" name="costumeGender" value="huge" /> Huge </td></tr>
+                            <tr><td>Upload Screenshot:</td><td><input type="file" name="costumeImageFile" value="">
+        	   	          	<tr>
+                            	<td>Gender</td>
+                                <td>
+                                	<input type="radio" name="costumeGender" value="male" /> Male
+                                	<input type="radio" name="costumeGender" value="female" /> Female
+                                    <input type="radio" name="costumeGender" value="huge" /> Huge
+                                </td>
+                            </tr>
             	   	        <tr><td>Costume Name</td><td><input type="text" name="costumeName" value="" /></td></tr>
                 	   		<tr><td valign="top">Description</td><td><textarea name="costumeDescription" rows="5" cols="50"></textarea></td></tr>
+                            <!--<tr><td valign="top">Tags (separated by commas)</td><td><input type="text" name="costumeTags" size="50"></td></tr>-->
 		            		<cfif #session.isLoggedIn# eq "true"> <!--- is user logged in? --->
 								<tr><td colspan="2" align="center"><input type="submit" value="Submit" name="bttnNewSubmit" /></td></tr>
                 	        <cfelse>
@@ -168,6 +267,21 @@
 <!--- end new costume section --->
 
             <cfcase value="search">
+            	<cfif bttnSubmitSearch eq "">
+	            	<cfform name="" action="main.cfm?action=search" method="post">
+		            	Search by:<br>
+    		            Costume Name:<input type="text" name="searchByName"><br>
+        		        <!--- Tag: <input type="text" name="searchTag"><br> --->
+            		    <input type="submit" value="Submit" name="bttnSubmitSearch">
+	                </cfform>
+                <cfelse>
+                	<table>
+                    	<tr><td>ID</td><td>Username</td><td>file</td><td>Gender</td><td>Reqs</td><td>Name</td><td>Image</td></tr>
+                	<cfoutput query="qSearchByCostumeName">
+                    	<tr><td>#costumeID#</td><td>#userName#</td><td>#costumeFile#</td><td>#costumeGender#</td><td>#costumeRequirements#</td><td>#costumeName#</td><td>#costumeImageFile#</td></tr>
+                    </cfoutput>
+	                </table>
+                </cfif>
 	        </cfcase>
 
             <cfcase value="style">
@@ -180,10 +294,19 @@
             </cfcase>
 <!--- end logout section --->
 
+<!--- start page -- display a random costume --->
             <cfdefaultcase>
-            	<!-- show a random costume -->
+                <cfoutput>
+                   	ID: #qGetRandomCostumeByID.costumeID#<br>
+                    Name: #qGetRandomCostumeByID.costumeName#<br />
+                    Gender: #qGetRandomCostumeByID.costumeGender#<br>
+                    Image:<img src="#qGetRandomCostumeByID.costumeImageFile#"><br>
+                    File:#qGetRandomCostumeByID.costumeFile#<br>
+                    Reqs:#qGetRandomCostumeByID.costumeRequirements#<br>
+                </cfoutput>
             </cfdefaultcase>
     	</cfswitch>
+<!--- end start page section --->        
     </div>
 </body>
 </html>
