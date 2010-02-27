@@ -1,3 +1,11 @@
+<!---
+to do:
+	add .tga to list of accepted image types
+	get tags working
+--->
+
+
+
 <!--- variable defs --->
 
 <cfparam name="title" default="City of Costumes::Home">
@@ -81,19 +89,26 @@
     </cfif>
     
 	<cfif #session.isLoggedIn# eq "true">
+    	<cfset form.costumeFile = REreplace(form.costumeFile,[chr(123)chr(125)chr(60)chr(62)chr(58)chr(59)chr(40)chr(41)chr(91)chr(93)],"")>
+        <!--- characters to remove: {}<>:;()[]  --->
+											
 		<cftry>
 	        <cffile action="upload" fileField="costumeFile" destination="#ExpandPath('costumefiles')#" nameConflict="overwrite" accept="application/octet-stream">
 	        <cfcatch><cfset message &= "Costume file upload failed<br />"></cfcatch>
         </cftry>
+        <cfif #cffile.serverExt# neq "costume">
+	    	<cfset fullPath = #ExpandPath('costumefiles')# & #cffile.serverFileName# & #cffile.serverFileExt#>
+    		<cffile action="delete" file="#fullPath#">
+	    </cfif>
 
         <cftry>
         	<cffile action="upload" filefield="costumeImageFile" destination="#ExpandPath('costumeimagefiles')#" nameconflict="overwrite" accept="image/jpeg,image/jpg">
-            <cfif isdefined("cfcatch.MimeType")>
-            </cfif>
-            <cfcatch><cfset message &= "Image upload failed: <br />">
-            	<cfoutput>#cfcatch.MimeType#<br></cfoutput>
-            </cfcatch>
+            <cfcatch><cfset message &= "Image upload failed<br />"></cfcatch>
         </cftry>
+        <cfif #cffile.serverExt# neq "jpg" AND #cffile.serverExt# neq "jpeg">
+    		<cfset fullPath = #ExpandPath('costumeimagefiles')# & #cffile.serverFileName# & #cffile.serverFileExt#>
+    		<cffile action="delete" file="#fullPath#">
+	    </cfif>
 		
         <cfif form.costumeGender eq "">
         	<cfset message &= "no gender<br>">
@@ -105,14 +120,14 @@
         	<cfset message &= "no desc<br>">
         </cfif>
 		
-
-		<cfquery name="qAddCostume" datasource="cocdata">
-	    	INSERT INTO tblCostumes (userName, costumeFile, costumeImageFile, costumeGender, costumeName, costumeDescription)
-   		    VALUES ('#session.userName#','#form.costumeFile#','#costumeImageFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#')
-    	</cfquery>
-        
-        <cfinclude template="parser.cfm">
-
+        <cftry>
+			<cfquery name="qAddCostume" datasource="cocdata">
+		    	INSERT INTO tblCostumes (userName, costumeFile, costumeImageFile, costumeGender, costumeName, costumeDescription)
+   			    VALUES ('#session.userName#','#form.costumeFile#','#costumeImageFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#')
+	    	</cfquery>
+    	<cfcatch><cfset message &= "One or more fields were not filled out.<br>"></cfcatch>
+            
+        <cfinclude template="parser.cfm"> <!--- separate file for easier maintenance --->
     </cfif>
 
 <cfelseif #form.bttnNewSubmitAnon# eq "Submit"> <!--- Costume form submitted by a non-logged-in user --->
@@ -120,7 +135,10 @@
    	<cfif #form.costumeFile# eq "" OR #form.costumeImageFile# eq "" OR #form.costumeGender# eq "" OR #form.costumeName# eq "" OR #form.costumeDescription# eq "">
         <cfset form.bttnNewSubmitAnon = "">
     </cfif>
-    
+
+  	<cfset form.costumeFile = REreplace(form.costumeFile,[chr(123)chr(125)chr(60)chr(62)chr(58)chr(59)chr(40)chr(41)chr(91)chr(93)],"")>
+    <!--- characters to remove: {}<>:;()[]  --->
+   
 	<cftry>
         <cffile action="upload" fileField="costumeFile" destination="#ExpandPath('costumefiles')#" nameConflict="overwrite" accept="application/octet-stream">
         <cfcatch><cfset message &= "Costume file upload failed<br />"></cfcatch>
@@ -139,6 +157,16 @@
     	<cffile action="delete" file="#fullPath#">
     </cfif>
 
+    <cfif form.costumeGender eq "">
+       	<cfset message &= "no gender<br>">
+    </cfif>
+    <cfif form.costumeName eq "">
+       	<cfset message &= "no name<br>">
+    </cfif>
+    <cfif form.costumeDescription eq "">
+       	<cfset message &= "no desc<br>">
+    </cfif>
+
 	<cftry>
 		<cfquery name="qAddCostumeAnon" datasource="cocdata">
 	    	INSERT INTO tblCostumes (userName, costumeFile, costumeGender, costumeName, costumeDescription)
@@ -146,6 +174,8 @@
     	</cfquery>
 		<cfcatch><cfset message &= "One or more fields were not filled out"></cfcatch>
     </cftry>
+    
+    <cfinclude template="parser.cfm"> <!--- separate file for easier maintenance --->
 </cfif>
 
 <!--- set the menu --->
@@ -207,9 +237,6 @@
 		SELECT * FROM tblCostumes WHERE costumeID = #randCostumeNum#;
 	</cfquery>
 </cfif>
-
-<!--- parse a costume file for reqs --->
-
 
 <!--- clientside output --->
 <!DOCTYPE html>
