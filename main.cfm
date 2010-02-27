@@ -22,6 +22,10 @@
 <cfparam name="form.bttnNewSubmitAnon" default="">
 <cfparam name="form.bttnSubmitSearch" default="">
 
+<cfset rootDir = GetBaseTemplatePath() />
+<cfset costumeFileDest = rootDir & ExpandPath('/costumefiles')>
+<cfset costumeImageFileDest = rootDir & ExpandPath('/costumeimagefiles')>
+
 <cfif #form.bttnLoginSubmit# eq "Submit"> <!--- login form submitted --->
 	<cfquery name="qLogin" datasource="cocdata">
     	SELECT * FROM tblUsers WHERE userGlobal = '#form.userGlobal#';
@@ -78,12 +82,12 @@
     
 	<cfif #session.isLoggedIn# eq "true">
 		<cftry>
-	        <cffile action="upload" fileField="costumeFile" destination="#rootDir#/costumes" nameConflict="overwrite" accept="application/octet-stream">
+	        <cffile action="upload" fileField="costumeFile" destination="#ExpandPath('costumefiles')#" nameConflict="overwrite" accept="application/octet-stream">
 	        <cfcatch><cfset message &= "Costume file upload failed<br />"></cfcatch>
         </cftry>
-        
+
         <cftry>
-        	<cffile action="upload" filefield="costumeImageFile" destination="#rootDir#/images" nameconflict="overwrite" accept="image/jpeg">
+        	<cffile action="upload" filefield="costumeImageFile" destination="#ExpandPath('costumeimagefiles')#" nameconflict="overwrite" accept="image/jpeg,image/jpg">
             <cfif isdefined("cfcatch.MimeType")>
             </cfif>
             <cfcatch><cfset message &= "Image upload failed: <br />">
@@ -102,10 +106,12 @@
         </cfif>
 		
 
-			<cfquery name="qAddCostume" datasource="cocdata">
-   		    	INSERT INTO tblCostumes (userName, costumeFile, costumeImageFile, costumeGender, costumeName, costumeDescription)
-       		    VALUES ('#session.userName#','#form.costumeFile#','#costumeImageFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#')
-	    	</cfquery>
+		<cfquery name="qAddCostume" datasource="cocdata">
+	    	INSERT INTO tblCostumes (userName, costumeFile, costumeImageFile, costumeGender, costumeName, costumeDescription)
+   		    VALUES ('#session.userName#','#form.costumeFile#','#costumeImageFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#')
+    	</cfquery>
+        
+        <cfinclude template="parser.cfm">
 
     </cfif>
 
@@ -115,15 +121,23 @@
         <cfset form.bttnNewSubmitAnon = "">
     </cfif>
     
-   	<cftry>
-        <cffile action="upload" fileField="costumeFile" destination="#rootDir#/costumes" nameConflict="overwrite" accept="application/octet-stream">
+	<cftry>
+        <cffile action="upload" fileField="costumeFile" destination="#ExpandPath('costumefiles')#" nameConflict="overwrite" accept="application/octet-stream">
         <cfcatch><cfset message &= "Costume file upload failed<br />"></cfcatch>
     </cftry>
+    <cfif #cffile.serverExt# neq "costume">
+    	<cfset fullPath = #ExpandPath('costumefiles')# & #cffile.serverFileName# & #cffile.serverFileExt#>
+    	<cffile action="delete" file="#fullPath#">
+    </cfif>
         
     <cftry>
-       	<cffile action="upload" filefield="costumeImageFile" destination="#rootDir#/images" nameconflict="overwrite" accept="image/jpg">
+       	<cffile action="upload" filefield="costumeImageFile" destination="#ExpandPath('costumeimagefiles')#" nameconflict="overwrite" accept="image/jpg,image/jpeg">
         <cfcatch><cfset message &= "Image upload failed<br />"></cfcatch>
     </cftry>
+    <cfif #cffile.serverExt# neq "jpg" AND #cffile.serverExt# neq "jpeg">
+    	<cfset fullPath = #ExpandPath('costumeimagefiles')# & #cffile.serverFileName# & #cffile.serverFileExt#>
+    	<cffile action="delete" file="#fullPath#">
+    </cfif>
 
 	<cftry>
 		<cfquery name="qAddCostumeAnon" datasource="cocdata">
@@ -161,7 +175,6 @@
        	<cfset #title# = "City of Costumes::Change Style">
     </cfcase>
 </cfswitch>
-
 
 <!--- display a random costume --->
 <cfquery datasource="cocdata" name="qGetRandomCostume">
@@ -267,12 +280,12 @@
                             	<td>Gender</td>
                                 <td>
                                 	<input type="radio" name="costumeGender" value="male" /> Male
-                                	<input type="radio" name="costumeGender" value="female" /> Female
+                                	<input type="radio" name="costumeGender" value="female" checked /> Female
                                     <input type="radio" name="costumeGender" value="huge" /> Huge
                                 </td>
                             </tr>
-            	   	        <tr><td>Costume Name</td><td><input type="text" name="costumeName" value="" /></td></tr>
-                	   		<tr><td valign="top">Description</td><td><textarea name="costumeDescription" rows="5" cols="50"></textarea></td></tr>
+            	   	        <tr><td>Costume Name</td><td><input type="text" name="costumeName" value="test" /></td></tr>
+                	   		<tr><td valign="top">Description</td><td><textarea name="costumeDescription" rows="5" cols="50">test</textarea></td></tr>
                             <!--<tr><td valign="top">Tags (separated by commas)</td><td><input type="text" name="costumeTags" size="50"></td></tr>-->
 		            		<cfif #session.isLoggedIn# eq "true"> <!--- is user logged in? --->
 								<tr><td colspan="2" align="center"><input type="submit" value="Submit" name="bttnNewSubmit" /></td></tr>
@@ -298,7 +311,7 @@
                 	<table>
                     	<tr><td>ID</td><td>Username</td><td>file</td><td>Gender</td><td>Reqs</td><td>Name</td><td>Image</td></tr>
                 	<cfoutput query="qSearchByCostumeName">
-                    	<tr><td>#costumeID#</td><td>#userName#</td><td>#costumeFile#</td><td>#costumeGender#</td><td>#costumeRequirements#</td><td>#costumeName#</td><td>#costumeImageFile#</td></tr>
+                    	<tr><td>#costumeID#</td><td>#userName#</td><td><a href="#costumeFile#"><img src="file-image.PNG"></a></td><td>#costumeGender#</td><td>#costumeRequirements#</td><td>#costumeName#</td><td>IMage</td></tr>
                     </cfoutput>
 	                </table>
                 </cfif>
@@ -306,7 +319,7 @@
 
             <cfcase value="style">
             </cfcase>
-<!--- end seearch section --->
+<!--- end search section --->
 
 <!--- logout section --->
 			<cfcase value="logout">
@@ -320,7 +333,7 @@
                 	<table>
                     	<tr><td>ID</td><td>Username</td><td>file</td><td>Gender</td><td>Reqs</td><td>Name</td><td>Image</td></tr>
 	                	<cfoutput query="qViewMyCostumes">
-    	                	<tr><td>#costumeID#</td><td>#userName#</td><td>#costumeFile#</td><td>#costumeGender#</td><td>#costumeRequirements#</td><td>#costumeName#</td><td>#costumeImageFile#</td></tr>
+    	                	<tr><td>#costumeID#</td><td>#userName#</td><td><a href="#costumeFile#">link</a></td><td>#costumeGender#</td><td>#costumeRequirements#</td><td>#costumeName#</td><td><img src="#costumeImageFile#" /></td></tr>
         	            </cfoutput>
 	                </table>
             </cfcase>
@@ -333,7 +346,7 @@
                     Name: #qGetRandomCostumeByID.costumeName#<br />
                     Gender: #qGetRandomCostumeByID.costumeGender#<br>
                     Image:<img src="#qGetRandomCostumeByID.costumeImageFile#"><br>
-                    File:#qGetRandomCostumeByID.costumeFile#<br>
+                    File:<a href="#qGetRandomCostumeByID.costumeFile#"><img src="file-image.PNG" /></a><br>
                     Reqs:#qGetRandomCostumeByID.costumeRequirements#<br>
                 </cfoutput>
             </cfdefaultcase>
