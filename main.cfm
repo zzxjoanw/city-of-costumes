@@ -1,7 +1,10 @@
 <!---
 to do:
-	add .tga to list of accepted image types
-	get tags working
+	now:
+		get tags working
+		bring parser.cfm up to date for i16
+	someday:
+		add forums
 --->
 
 
@@ -102,10 +105,14 @@ to do:
 	    </cfif>
 
         <cftry>
-        	<cffile action="upload" filefield="costumeImageFile" destination="#ExpandPath('costumeimagefiles')#" nameconflict="overwrite" accept="image/jpeg,image/jpg">
+        	<cffile action="upload"
+            		filefield="costumeImageFile"
+                    destination="#ExpandPath('costumeimagefiles')#"
+                    nameconflict="makeunique"
+            		accept="image/jpeg,image/jpg,image/tga,image/x-tga,image/targa,image/x-targa">
             <cfcatch><cfset message &= "Image upload failed<br />"></cfcatch>
         </cftry>
-        <cfif #cffile.serverExt# neq "jpg" AND #cffile.serverExt# neq "jpeg">
+        <cfif #cffile.serverExt# neq "jpg" AND #cffile.serverExt# neq "jpeg" AND #cffile.serverExt# neq "tga">
     		<cfset fullPath = #ExpandPath('costumeimagefiles')# & #cffile.serverFileName# & #cffile.serverFileExt#>
     		<cffile action="delete" file="#fullPath#">
 	    </cfif>
@@ -119,15 +126,16 @@ to do:
         <cfif form.costumeDescription eq "">
         	<cfset message &= "no desc<br>">
         </cfif>
+        
+        <cfinclude template="parser.cfm"> <!--- separate file for easier maintenance --->
 		
         <cftry>
 			<cfquery name="qAddCostume" datasource="cocdata">
-		    	INSERT INTO tblCostumes (userName, costumeFile, costumeImageFile, costumeGender, costumeName, costumeDescription)
-   			    VALUES ('#session.userName#','#form.costumeFile#','#costumeImageFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#')
+		    	INSERT INTO tblCostumes (userName, costumeFile, costumeImageFile, costumeGender, costumeName, costumeDescription, costumeRequirements)
+   			    VALUES ('#session.userName#','#form.costumeFile#','#costumeImageFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#','#costumeRequirements#')
 	    	</cfquery>
     	<cfcatch><cfset message &= "One or more fields were not filled out.<br>"></cfcatch>
             
-        <cfinclude template="parser.cfm"> <!--- separate file for easier maintenance --->
     </cfif>
 
 <cfelseif #form.bttnNewSubmitAnon# eq "Submit"> <!--- Costume form submitted by a non-logged-in user --->
@@ -149,12 +157,16 @@ to do:
     </cfif>
         
     <cftry>
-       	<cffile action="upload" filefield="costumeImageFile" destination="#ExpandPath('costumeimagefiles')#" nameconflict="overwrite" accept="image/jpg,image/jpeg">
+       	<cffile action="upload"
+           		filefield="costumeImageFile"
+                destination="#ExpandPath('costumeimagefiles')#"
+                nameconflict="makeunique"
+          		accept="image/jpeg,image/jpg,image/tga,image/x-tga,image/targa,image/x-targa">
         <cfcatch><cfset message &= "Image upload failed<br />"></cfcatch>
     </cftry>
-    <cfif #cffile.serverExt# neq "jpg" AND #cffile.serverExt# neq "jpeg">
-    	<cfset fullPath = #ExpandPath('costumeimagefiles')# & #cffile.serverFileName# & #cffile.serverFileExt#>
-    	<cffile action="delete" file="#fullPath#">
+    <cfif #cffile.serverExt# neq "jpg" AND #cffile.serverExt# neq "jpeg" AND #cffile.serverExt# neq "tga">
+  		<cfset fullPath = #ExpandPath('costumeimagefiles')# & #cffile.serverFileName# & #cffile.serverFileExt#>
+   		<cffile action="delete" file="#fullPath#">
     </cfif>
 
     <cfif form.costumeGender eq "">
@@ -166,16 +178,16 @@ to do:
     <cfif form.costumeDescription eq "">
        	<cfset message &= "no desc<br>">
     </cfif>
+    
+    <cfinclude template="parser.cfm"> <!--- separate file for easier maintenance --->
 
 	<cftry>
 		<cfquery name="qAddCostumeAnon" datasource="cocdata">
-	    	INSERT INTO tblCostumes (userName, costumeFile, costumeGender, costumeName, costumeDescription)
-   		    VALUES ('','#form.costumeFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#')
+	    	INSERT INTO tblCostumes (userName, costumeFile, costumeGender, costumeName, costumeDescription, costumeRequirements)
+   		    VALUES ('#session.userName#','#form.costumeFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#','#costumeRequirements#')
     	</cfquery>
 		<cfcatch><cfset message &= "One or more fields were not filled out"></cfcatch>
     </cftry>
-    
-    <cfinclude template="parser.cfm"> <!--- separate file for easier maintenance --->
 </cfif>
 
 <!--- set the menu --->
