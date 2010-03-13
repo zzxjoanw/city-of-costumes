@@ -20,6 +20,7 @@ to do:
 <cfparam name="session.userName" default="Guest">
 <cfparam name="session.isLoggedIn" default="false">
 <cfparam name="session.css" default="hero">
+<cfparam name="session.userRights" default="">
 
 <cfparam name="form.userGlobal" default="">
 <cfparam name="form.costumeGender" default="">
@@ -37,18 +38,21 @@ to do:
 <cfset costumeFileDest = rootDir & ExpandPath('/costumefiles')>
 <cfset costumeImageFileDest = rootDir & ExpandPath('/costumeimagefiles')>
 
-<cfif #form.bttnLoginSubmit# eq "Submit"> <!--- login form submitted --->
+<!--- login form submitted --->
+<cfif #form.bttnLoginSubmit# eq "Submit">
 	<cfquery name="qLogin" datasource="cocdata">
     	SELECT * FROM tblUsers WHERE userGlobal = '#form.userGlobal#';
     </cfquery>
     <cfif #qLogin.userPassword# eq #form.userPassword#>
     	<cfset session.userName = #qLogin.userGlobal#>
         <cfset session.isLoggedIn = "true">
+        <cfset session.userRights = #qLogin.userRights#>
         <cflocation url="main.cfm">
 	</cfif>
 </cfif>
 
-<cfif #form.bttnRegSubmit# eq "Submit"> <!--- Reg form submitted --->
+<!--- Reg form submitted --->
+<cfif #form.bttnRegSubmit# eq "Submit"> 
 	<cfquery name="qUserCheck" datasource="cocdata">
 		SELECT userGlobal FROM tblUsers WHERE userGlobal = '#form.userGlobal#';
 	</cfquery>
@@ -92,7 +96,7 @@ to do:
     </cfif>
     
 	<cfif #session.isLoggedIn# eq "true">
-    	<cfset form.costumeFile = REreplace(form.costumeFile,[chr(123)chr(125)chr(60)chr(62)chr(58)chr(59)chr(40)chr(41)chr(91)chr(93)],"")>
+    	<cfset form.costumeFile = REreplace(form.costumeFile,"\{\}\<\>\:\;\(\)\[\]","")>
         <!--- characters to remove: {}<>:;()[]  --->
 											
 		<cftry>
@@ -135,6 +139,7 @@ to do:
    			    VALUES ('#session.userName#','#form.costumeFile#','#costumeImageFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#','#costumeRequirements#')
 	    	</cfquery>
     	<cfcatch><cfset message &= "One or more fields were not filled out.<br>"></cfcatch>
+       	</cftry>
             
     </cfif>
 
@@ -144,7 +149,7 @@ to do:
         <cfset form.bttnNewSubmitAnon = "">
     </cfif>
 
-  	<cfset form.costumeFile = REreplace(form.costumeFile,[chr(123)chr(125)chr(60)chr(62)chr(58)chr(59)chr(40)chr(41)chr(91)chr(93)],"")>
+  	<cfset form.costumeFile = REreplace(form.costumeFile,"\{\}\<\>\:\;\(\)\[\]","")>
     <!--- characters to remove: {}<>:;()[]  --->
    
 	<cftry>
@@ -192,11 +197,13 @@ to do:
 
 <!--- set the menu --->
 <cfif #session.isLoggedIn# eq "true">
-	<cfset menuText = "[ <a href='main.cfm?action=logout'>Logout</a> | <a href='main.cfm?action=new'>Add New Costume</a> | 
-						<a href='main.cfm?action=view'>View My Costumes</a> | <a href='main.cfm?action=search'>Search</a> ]">
+	<cfif #session.userRights# eq "admin">
+    	<cfset menuText = "[ <a href='main.cfm?action=logout'>Logout</a> | <a href='main.cfm?action=new'>Add New Costume</a> | <a href='main.cfm?action=view'>View My Costumes</a> | <a href='main.cfm?action=search'>Search</a> | <a href='admin.cfm'>Admin</a>]">
+     <cfelse>
+		<cfset menuText = "[ <a href='main.cfm?action=logout'>Logout</a> | <a href='main.cfm?action=new'>Add New Costume</a> | <a href='main.cfm?action=view'>View My Costumes</a> | <a href='main.cfm?action=search'>Search</a> ]">
+	</cfif>        
 <cfelse>
-	<cfset menuText = "[ <a href='main.cfm?action=register'>Register</a> | <a href='main.cfm?action=login'>Login</a> | 
-						<a href='main.cfm?action=new'>Add New Costume</a> | <a href='main.cfm?action=search'>Search</a> ]">
+	<cfset menuText = "[ <a href='main.cfm?action=register'>Register</a> | <a href='main.cfm?action=login'>Login</a> | <a href='main.cfm?action=new'>Add New Costume</a> | <a href='main.cfm?action=search'>Search</a> ]">
 </cfif>
 
 <!--- set the title --->
@@ -258,7 +265,7 @@ to do:
 	<cfoutput>
     	<title>#title#</title>
         <link rel="stylesheet" href="coc.css" /><!-- formatty stuff -->
-    	<link rel="stylesheet" href="#session.css#.css" /><!-- theme -->
+    	<!---<link rel="stylesheet" href="#session.css#.css" /><!-- theme --> --->
 	</cfoutput>
 	<link rel="icon" type="image/gif" href="favicon.gif" /> <!-- firefox, opera -->
     <link rel="SHORTCUT ICON" href="favicon.gif"/> <!-- ie -->
@@ -282,7 +289,7 @@ to do:
 	            	<cfform name="" action="main.cfm?action=login" method="post">
     	            	<table>
         	            	<tr><td>Account Name:</td><td><cfinput type="text" name="userGlobal" value=""></td></tr>
-            	            <tr><td>Password:</td><td><cfinput type="text" name="userPassword" value=""></td></tr>
+            	            <tr><td>Password:</td><td><cfinput type="password" name="userPassword" value=""></td></tr>
                 	        <tr><td colspan="3"><cfinput type="submit" value="Submit" name="bttnLoginSubmit"></td></tr>
                     	</table>
 	                </cfform>
@@ -364,6 +371,7 @@ to do:
 			<cfcase value="logout">
             	<cfset session.userName = "">
                 <cfset session.isLoggedIn = "false">
+                <cflocation url="main.cfm">
             </cfcase>
 <!--- end logout section --->
 

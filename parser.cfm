@@ -5,7 +5,7 @@
      		  OR contains "!Widow_Shader_Helm_NoColor"
 			  OR contains "!x_mumystic_hair_nocolor"
 			  OR contains "!x_wolfarmor_hair_nocolor">
-	<cfset costumeRequirements &= "51 month Vet Reward<br>">
+	<cfset costumeRequirements &= "51 month Vet Reward OR Pre-order City of Villains<br>">
 </cfif>
 
 <cfif cfContents contains "box">
@@ -88,9 +88,71 @@
 	<cfset costumeRequirements &= "Tech Booster<br>">
 </cfif>
 
+<cfif cfContents contains "Magic"
+			  OR contains "Witch"
+			  OR contains "Wizard"
+			  OR contains "Renegade">
+	<cfset costumeRequirements &= "Magic Booster<br>">
+</cfif>
 
+<cfif cfContents contains "Warrior"
+			  OR contains "Tai"
+			  OR contains "Dragon"
+			  OR contains "Foot"
+			  OR contains "Tiger"
+			  OR contains "Oni"
+			  OR contains "Qin"
+			  OR contains "Braided_Buns">
+	<cfset costumeRequirements &= "MA Booster<br>">
+</cfif>
+
+<cfif cfContents contains "Wedding"
+			  OR contains "Plus">
+	<cfset costumeRequirements &= "Wedding Pack<br>">
+</cfif>
 <!--- end booster packs --->
 
+<!--- invented pieces --->
+<cfif cfContents contains "bat">
+	<cfset costumeRequirements &= "Crafted a Bat Wings recipe<br>">
+</cfif>
+
+<cfif cfContents contains "bone">
+	<cfset costumeRequirements &= "Crafted a Bone Wings recipe<br>">
+</cfif>
+
+<cfif cfContents contains "Burned">
+	<cfset costumeRequirements &= "Crafted a Burned Wings recipe<br>">
+</cfif>
+
+<cfif cfContents contains "Cherub">
+	<cfset costumeRequirements &= "Crafted a Cherub Wings recipe<br>">
+</cfif>
+
+<cfif cfContents contains "dragon_wings">
+	<cfset costumeRequirements &= "Crafted a Dragon Wings recipe<br>">
+</cfif>
+
+<cfif cfContents contains "fairy">
+	<cfset costumeRequirements &= "Crafted a Fairy Wings recipe<br>">
+</cfif>
+
+<cfif cfContents contains "insect">
+	<cfset costumeRequirements &= "Crafted a Insect Wings recipe<br>">
+</cfif>
+
+<cfif cfContents contains "tech">
+	<cfset costumeRequirements &= "Crafted a Piston Boots recipe<br>">
+</cfif>
+
+<cfif cfContents contains "boot_rocket">
+	<cfset costumeRequirements &= "Crafted a Rocket Boots recipe<br>">
+</cfif>
+
+<cfif cfContents contains "xxx">
+	<cfset costumeRequirements &= "Crafted a Winged Boots recipe<br>">
+</cfif>
+<!--- end invented pieces --->
 
 <!--- in-game unlockables --->
 <cfif cfContents contains "Roman">
@@ -104,3 +166,18 @@
 <cfif cfContents contains "Heart" OR contains "GreekSandals">
 	<cfset costumeRequirements &= "Valentine's Day event reward<br>">
 </cfif>
+
+<cfif cfContents contains "Epaulets">
+	<cfset costumeRequirements &= "Earned the Task Force Commander badge<br>">
+</cfif>
+
+<cfif cfContents contains "Santa" OR contains "Xmas" OR contains "EarMuffs">
+	<cfset costumeRequirements &= "Winter Event reward<br>">
+</cfif>
+
+<cfif cfContents contains "Pumpkin">
+	<cfset costumeRequirements &= "Earned the Apocalypse Survivor badge<br>">
+</cfif>
+<!--- end in-game unlockables --->
+
+
