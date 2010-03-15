@@ -1,10 +1,12 @@
 <cffile action="read" file="#form.costumeFile#" variable="cfContents">
 
+<cfset costumeRequirements = "">
+
 <!--- vet rewards, highest to lowest --->
-<cfif cfContents contains "!X_Arachnos_Crab_Spider_Face"
-     		  OR contains "!Widow_Shader_Helm_NoColor"
-			  OR contains "!x_mumystic_hair_nocolor"
-			  OR contains "!x_wolfarmor_hair_nocolor">
+<cfif cfContents contains "!X_Arachnos_Crab_Spider_Face" OR
+      cfContents contains "!Widow_Shader_Helm_NoColor" OR
+	  cfContents contains "!x_mumystic_hair_nocolor" OR
+	  cfContents contains "!x_wolfarmor_hair_nocolor">
 	<cfset costumeRequirements &= "51 month Vet Reward OR Pre-order City of Villains<br>">
 </cfif>
 
@@ -12,14 +14,14 @@
 	<cfset costumeRequirements &= "39 month Vet Reward">
 </cfif>
 
-<cfif cfContents contains "freedom_phalanx"
-			  OR contains "vindicators"
-			  OR contains "vanguard"  <!--- how to differentiate from the merit-bought pieces? --->
-			  OR contains "V_Arachnos_02"
-			  OR contains "ppd"
-			  OR contains "cage_consortium"
-			  OR contains "circle_of_thorns"
-			  OR contains "council">
+<cfif cfContents contains "freedom_phalanx" OR
+	  cfContents contains "vindicators" OR
+	  cfContents contains "Emblem_V_Vanguard_01" OR
+	  cfContents contains "V_Arachnos_02" OR
+	  cfContents contains "ppd" OR
+	  cfContents contains "cage_consortium" OR
+	  cfContents contains "circle_of_thorns" OR
+	  cfContents contains "council">
 	<cfset costumeRequirements &= "30 month Vet Reward<br>">
 </cfif>
 
@@ -31,23 +33,23 @@
 	<cfset costumeRequirements &= "21 month Vet Reward<br>">
 </cfif>
 
-<cfif cfContents contains "Samurai"
-			  OR contains "Oni">
+<cfif cfContents contains "Samurai" OR
+	  cfContents contains "Oni">
 	<cfset costumeRequirements &= "18 month Vet Reward<br>">
 </cfif>
 
-<cfif cfContents contains "Wings_Angel"
-			  OR contains "Wings_Demon">
-	<cfset costume Requirements &= "15 month Vet Reward">
+<cfif cfContents contains "Wings_Angel" OR
+	  cfContents contains "Wings_Demon">
+	<cfset costumeRequirements &= "15 month Vet Reward">
 </cfif>
 
-<cfif cfContents contains "Athletic"
-			  OR contains "!Chest_Belly_Tee_"
-			  OR contains "!chest_Desire"
-			  OR contains "Disco"
-			  OR contains "Hacker"
-			  OR contains "Shirt_Student_02"
-			  OR contains "kilt">
+<cfif cfContents contains "Athletic" OR
+		cfContents contains "!Chest_Belly_Tee_" OR
+		cfContents contains "!chest_Desire" OR
+		cfContents contains "Disco" OR
+		cfContents contains "Hacker" OR
+		cfContents contains "Shirt_Student_02" OR
+		cfContents contains "kilt">
 	<cfset costumeRequirements &= "9 month Vet Reward<br>">
 </cfif>
 
@@ -65,8 +67,8 @@
 	<cfset costumeRequirements &= "Mac Pack<br>">
 </cfif>
 
-<cfif cfContents contains "Sinister"
-			  OR contains "eagle_armor">
+<cfif cfContents contains "Sinister" OR
+      cfContents contains "eagle_armor">
 	<cfset costumeRequirements &= "Good vs Evil<br>">
 </cfif>
 
@@ -76,11 +78,11 @@
 <!--- end boxes --->
 
 <!--- booster packs --->
-<cfif cfContents contains "Doctor"
-			  OR contains "Goggle"
-			  OR contains "Scien"
-			  OR contains "Rubber"
-			  OR contains "Lens_01">
+<cfif cfContents contains "Doctor" OR
+      cfContents contains "Goggle" OR
+		 cfContents contains "Scien" OR
+		cfContents contains "Rubber" OR
+		cfContents contains "Lens_01">
 	<cfset costumeRequirements &= "Science Booster<br>">
 </cfif>
 
@@ -88,26 +90,26 @@
 	<cfset costumeRequirements &= "Tech Booster<br>">
 </cfif>
 
-<cfif cfContents contains "Magic"
-			  OR contains "Witch"
-			  OR contains "Wizard"
-			  OR contains "Renegade">
+<cfif cfContents contains "Magic" OR
+      cfContents contains "Witch" OR
+		 cfContents contains "Wizard" OR
+		 cfContents contains "Renegade">
 	<cfset costumeRequirements &= "Magic Booster<br>">
 </cfif>
 
-<cfif cfContents contains "Warrior"
-			  OR contains "Tai"
-			  OR contains "Dragon"
-			  OR contains "Foot"
-			  OR contains "Tiger"
-			  OR contains "Oni"
-			  OR contains "Qin"
-			  OR contains "Braided_Buns">
+<cfif cfContents contains "Warrior" OR
+		  cfContents contains "Tai" OR
+		  cfContents contains "Dragon" OR
+		  cfContents contains "Foot" OR
+		  cfContents contains "Tiger" OR
+		  cfContents contains "Oni" OR
+		  cfContents contains "Qin" OR
+		  cfContents contains "Braided_Buns">
 	<cfset costumeRequirements &= "MA Booster<br>">
 </cfif>
 
-<cfif cfContents contains "Wedding"
-			  OR contains "Plus">
+<cfif cfContents contains "Wedding" OR
+	  cfContents contains "Plus">
 	<cfset costumeRequirements &= "Wedding Pack<br>">
 </cfif>
 <!--- end booster packs --->
@@ -163,7 +165,8 @@
 	<cfset costumeRequirements &= "Bought with Vanguard Merits<br>">
 </cfif>
 
-<cfif cfContents contains "Heart" OR contains "GreekSandals">
+<cfif cfContents contains "Heart" OR
+      cfContents contains "GreekSandals">
 	<cfset costumeRequirements &= "Valentine's Day event reward<br>">
 </cfif>
 
@@ -171,7 +174,9 @@
 	<cfset costumeRequirements &= "Earned the Task Force Commander badge<br>">
 </cfif>
 
-<cfif cfContents contains "Santa" OR contains "Xmas" OR contains "EarMuffs">
+<cfif cfContents contains "Santa" OR
+      cfContents contains "Xmas" OR
+	  cfContents contains "EarMuffs">
 	<cfset costumeRequirements &= "Winter Event reward<br>">
 </cfif>
 

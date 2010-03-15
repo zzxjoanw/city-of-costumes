@@ -3,6 +3,8 @@ to do:
 	now:
 		get tags working
 		bring parser.cfm up to date for i16
+		ensure that the filename checker is working properly (see line 156)
+		disallow direct navigation to parser.cfm
 	someday:
 		add forums
 --->
@@ -10,7 +12,6 @@ to do:
 
 
 <!--- variable defs --->
-
 <cfparam name="title" default="City of Costumes::Home">
 <cfparam name="message" default="">
 <cfparam name="rootDir" default="c:/coldfusion8/wwwroot/portfolio_site/city-of-costumes">
@@ -67,29 +68,18 @@ to do:
 	</cfif>
 </cfif>
 
-<!--- search query --->
+<!--- Search by Name query --->
 <cfquery name="qSearchByCostumeName" datasource="cocdata">
 	SELECT * FROM tblCostumes WHERE costumeName = '#form.searchByName#';
 </cfquery>
 
-<!--- my costumes query --->
+<!--- View My Costumes query --->
 <cfquery name="qViewMyCostumes" datasource="cocdata">
 	SELECT * FROM tblCostumes WHERE userName = '#session.userName#';
 </cfquery>
 
-<!--- add tags to db --->
-<!---
-<cfif #form.costumeTags# neq "">
-	<cfset costumeTagList = ListToArray(form.costumeTags,',',false)>
-    <cfloop index="i" from="0" to="ArrayLen(costumeTagList)">
-    	<cfquery name="qAddTag" datasource="cocdata">
-        	INSERT INTO tblTags ()
-            VALUES ()
-        </cfquery>
-    </cfloop>
-</cfif>--->
-
-<cfif #form.bttnNewSubmit# eq "Submit"> <!--- Costume form submitted by a logged-in user --->
+<!--- Add a New Costume While Logged In --->
+<cfif #form.bttnNewSubmit# eq "Submit">
 	<cfset message = "">
 	<cfif #form.costumeFile# eq "" OR #form.costumeImageFile# eq "" OR #form.costumeGender# eq "" OR #form.costumeName# eq "" OR #form.costumeDescription# eq "">
         <cfset form.bttnNewSubmit = "">
@@ -132,32 +122,49 @@ to do:
         </cfif>
         
         <cfinclude template="parser.cfm"> <!--- separate file for easier maintenance --->
-		
-        <cftry>
-			<cfquery name="qAddCostume" datasource="cocdata">
-		    	INSERT INTO tblCostumes (userName, costumeFile, costumeImageFile, costumeGender, costumeName, costumeDescription, costumeRequirements)
-   			    VALUES ('#session.userName#','#form.costumeFile#','#costumeImageFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#','#costumeRequirements#')
-	    	</cfquery>
-    	<cfcatch><cfset message &= "One or more fields were not filled out.<br>"></cfcatch>
-       	</cftry>
+
+    	<cftransaction>
+           	<cftry>
+				<cfquery name="qAddCostume" datasource="cocdata">
+			    	INSERT INTO tblCostumes (userName, costumeFile, costumeImageFile, costumeGender, costumeName, costumeDescription, costumeRequirements)
+   				    VALUES ('#session.userName#','#form.costumeFile#','#costumeImageFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#','#costumeRequirements#')
+    			</cfquery>
+		    	<cfcatch><cfset message &= "One or more fields were not filled out.<br>"></cfcatch>
+			</cftry>
             
+            <cfquery name="qGetLastRecordID" datasource="cocdata">
+            	SELECT @@IDENTITY AS newID; <!--- returns the last inserted primary key value --->
+            </cfquery>
+            
+            <cfif #form.costumeTags# neq ""> <!--- add tags to db --->
+				<cfset costumeTagsArray = ListToArray(form.costumeTags)>
+                <cfloop index="i" from="1" to="#ArrayLen(costumeTagsArray)#">
+	    			<cfquery name="qAddTag" datasource="cocdata">
+  		    			INSERT INTO tblTags (costumeID, tagText)
+	    	    	    VALUES ('#qGetLastRecordID.newID#','#costumeTagsArray[i]#')
+    			    </cfquery>
+                </cfloop>
+            </cfif>
+       	</cftransaction>
     </cfif>
 
-<cfelseif #form.bttnNewSubmitAnon# eq "Submit"> <!--- Costume form submitted by a non-logged-in user --->
+<!--- Add a New Costume Anonymously --->
+<cfelseif #form.bttnNewSubmitAnon# eq "Submit">
 	<cfset message = "">
    	<cfif #form.costumeFile# eq "" OR #form.costumeImageFile# eq "" OR #form.costumeGender# eq "" OR #form.costumeName# eq "" OR #form.costumeDescription# eq "">
         <cfset form.bttnNewSubmitAnon = "">
     </cfif>
 
-  	<cfset form.costumeFile = REreplace(form.costumeFile,"\{\}\<\>\:\;\(\)\[\]","")>
+  	<cfset form.costumeFile = REreplace(form.costumeFile,"\{\}\<\>\:\;\(\)\[\]","")> <!--- will this keep checking until all characters are removed? --->
     <!--- characters to remove: {}<>:;()[]  --->
+    <!--- a windows file cannot contain :<> --->
    
 	<cftry>
         <cffile action="upload" fileField="costumeFile" destination="#ExpandPath('costumefiles')#" nameConflict="overwrite" accept="application/octet-stream">
         <cfcatch><cfset message &= "Costume file upload failed<br />"></cfcatch>
     </cftry>
-    <cfif #cffile.serverExt# neq "costume">
-    	<cfset fullPath = #ExpandPath('costumefiles')# & #cffile.serverFileName# & #cffile.serverFileExt#>
+    <cfif #cffile.serverFileExt# neq "costume">
+    	<cfset fullPath = #ExpandPath('costumefiles\')# & #cffile.serverFileName# & "." & #cffile.serverFileExt#>
     	<cffile action="delete" file="#fullPath#">
     </cfif>
         
@@ -169,7 +176,7 @@ to do:
           		accept="image/jpeg,image/jpg,image/tga,image/x-tga,image/targa,image/x-targa">
         <cfcatch><cfset message &= "Image upload failed<br />"></cfcatch>
     </cftry>
-    <cfif #cffile.serverExt# neq "jpg" AND #cffile.serverExt# neq "jpeg" AND #cffile.serverExt# neq "tga">
+    <cfif #cffile.serverFileExt# neq "jpg" AND #cffile.serverFileExt# neq "jpeg" AND #cffile.serverFileExt# neq "tga">
   		<cfset fullPath = #ExpandPath('costumeimagefiles')# & #cffile.serverFileName# & #cffile.serverFileExt#>
    		<cffile action="delete" file="#fullPath#">
     </cfif>
@@ -186,13 +193,29 @@ to do:
     
     <cfinclude template="parser.cfm"> <!--- separate file for easier maintenance --->
 
-	<cftry>
-		<cfquery name="qAddCostumeAnon" datasource="cocdata">
-	    	INSERT INTO tblCostumes (userName, costumeFile, costumeGender, costumeName, costumeDescription, costumeRequirements)
-   		    VALUES ('#session.userName#','#form.costumeFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#','#costumeRequirements#')
-    	</cfquery>
-		<cfcatch><cfset message &= "One or more fields were not filled out"></cfcatch>
-    </cftry>
+	<cftransaction>
+		<cftry>
+			<cfquery name="qAddCostumeAnon" datasource="cocdata">
+	    		INSERT INTO tblCostumes (userName, costumeFile, costumeGender, costumeName, costumeDescription, costumeRequirements)
+	   		    VALUES ('#session.userName#','#form.costumeFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#','#costumeRequirements#')
+    		</cfquery>
+			<cfcatch>One or more fields were not filled out.</cfcatch>
+    	</cftry>
+    	
+    	<cfquery name="qGetLastRecordID" datasource="cocdata">
+    		SELECT @@IDENTITY AS newID; <!--- returns the last inserted primary key value --->
+	    </cfquery>
+
+        <cfif #form.costumeTags# neq ""> <!--- add tags to db --->
+			<cfset costumeTagsArray = ListToArray(form.costumeTags)>
+            <cfloop index="i" from="1" to="#ArrayLen(costumeTagsArray)#">
+             	<cfquery name="qAddTag" datasource="cocdata">
+  	    			INSERT INTO tblTags (costumeID, tagText)
+	   	    	    VALUES ('#qGetLastRecordID.newID#','#costumeTagsArray[i]#');
+    		    </cfquery>
+            </cfloop>
+        </cfif>
+    </cftransaction>
 </cfif>
 
 <!--- set the menu --->
@@ -332,7 +355,7 @@ to do:
                             </tr>
             	   	        <tr><td>Costume Name</td><td><input type="text" name="costumeName" value="test" /></td></tr>
                 	   		<tr><td valign="top">Description</td><td><textarea name="costumeDescription" rows="5" cols="50">test</textarea></td></tr>
-                            <!--<tr><td valign="top">Tags (separated by commas)</td><td><input type="text" name="costumeTags" size="50"></td></tr>-->
+                            <tr><td valign="top">Tags (separated by commas)</td><td><input type="text" name="costumeTags" size="50"></td></tr>
 		            		<cfif #session.isLoggedIn# eq "true"> <!--- is user logged in? --->
 								<tr><td colspan="2" align="center"><input type="submit" value="Submit" name="bttnNewSubmit" /></td></tr>
                 	        <cfelse>
@@ -347,17 +370,24 @@ to do:
 <!--- search section--->
             <cfcase value="search">
             	<cfif bttnSubmitSearch eq "">
+                	<br>
+                	<fieldset >
 	            	<cfform name="" action="main.cfm?action=search" method="post">
 		            	Search by:<br>
     		            Costume Name:<input type="text" name="searchByName"><br>
-        		        <!--- Tag: <input type="text" name="searchTag"><br> --->
-            		    <input type="submit" value="Submit" name="bttnSubmitSearch">
+        		        Tag: <input type="text" name="searchTag" size="20" maxlength="20"><input type="submit" value="Submit" name="bttnSubmitSearch">
 	                </cfform>
+                    </fieldset>
                 <cfelse>
                 	<table>
                     	<tr><td>ID</td><td>Username</td><td>file</td><td>Gender</td><td>Reqs</td><td>Name</td><td>Image</td></tr>
                 	<cfoutput query="qSearchByCostumeName">
-                    	<tr><td>#costumeID#</td><td>#userName#</td><td><a href="#costumeFile#"><img src="file-image.PNG"></a></td><td>#costumeGender#</td><td>#costumeRequirements#</td><td>#costumeName#</td><td>IMage</td></tr>
+                    	<tr>
+                        	<td>#costumeID#</td><td>#userName#</td>
+                            <td><a href="#costumeFile#"><img src="file-image.PNG"></a></td>
+                            <td>#costumeGender#</td><td>#costumeRequirements#</td>
+                            <td>#costumeName#</td><td>IMage</td>
+                        </tr>
                     </cfoutput>
 	                </table>
                 </cfif>
