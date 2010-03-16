@@ -1,11 +1,10 @@
 <!---
 to do:
 	now:
-		get tags working
 		bring parser.cfm up to date for i16
 		ensure that the filename checker is working properly (see line 156)
-		disallow direct navigation to parser.cfm
 	someday:
+		implement css style selection
 		add forums
 --->
 
@@ -13,12 +12,12 @@ to do:
 
 <!--- variable defs --->
 <cfparam name="title" default="City of Costumes::Home">
-<cfparam name="message" default="">
+<cfparam name="message" default=""> <!--- various error messages --->
 <cfparam name="rootDir" default="c:/coldfusion8/wwwroot/portfolio_site/city-of-costumes">
 
 <cfparam name="url.action" default="">
 
-<cfparam name="session.userName" default="Guest">
+<cfparam name="session.userGlobal" default="Guest">
 <cfparam name="session.isLoggedIn" default="false">
 <cfparam name="session.css" default="hero">
 <cfparam name="session.userRights" default="">
@@ -26,14 +25,16 @@ to do:
 <cfparam name="form.userGlobal" default="">
 <cfparam name="form.costumeGender" default="">
 <cfparam name="form.costumeImageFile" default="">
-<cfparam name="form.costumeTags" default="">
-<cfparam name="form.searchByName" default="">
+<cfparam name="form.costumeTags" default=""> <!--- new costume form (both): comma-delimited tag list --->
+<cfparam name="form.searchByName" default=""> <!--- costume search form: costume name --->
+<cfparam name="form.searchByTag" default=""> <!--- costume search form: tag --->
 
-<cfparam name="form.bttnRegSubmit" default="">
-<cfparam name="form.bttnLoginSubmit" default="">
-<cfparam name="form.bttnNewSubmit" default="">
-<cfparam name="form.bttnNewSubmitAnon" default="">
-<cfparam name="form.bttnSubmitSearch" default="">
+<cfparam name="form.bttnRegSubmit" default=""> <!--- user registration --->
+<cfparam name="form.bttnLoginSubmit" default=""> <!--- user login --->
+<cfparam name="form.bttnNewSubmit" default=""> <!--- new costume form (reg'd user): add new costume --->
+<cfparam name="form.bttnNewSubmitAnon" default=""> <!--- new costume form (anon user): add new costume --->
+<cfparam name="form.bttnSubmitSearchByName" default=""> <!--- costume search form: search by name --->
+<cfparam name="form.bttnSubmitSearchByTag" default=""> <!--- costume search form: search by tag --->
 
 <cfset rootDir = GetBaseTemplatePath() />
 <cfset costumeFileDest = rootDir & ExpandPath('/costumefiles')>
@@ -45,7 +46,7 @@ to do:
     	SELECT * FROM tblUsers WHERE userGlobal = '#form.userGlobal#';
     </cfquery>
     <cfif #qLogin.userPassword# eq #form.userPassword#>
-    	<cfset session.userName = #qLogin.userGlobal#>
+    	<cfset session.userGlobal = #qLogin.userGlobal#>
         <cfset session.isLoggedIn = "true">
         <cfset session.userRights = #qLogin.userRights#>
         <cflocation url="main.cfm">
@@ -73,9 +74,14 @@ to do:
 	SELECT * FROM tblCostumes WHERE costumeName = '#form.searchByName#';
 </cfquery>
 
+<!--- Search by Tags query --->
+<cfquery name="qSearchByCostumeTags" datasource="cocdata">
+	SELECT * FROM tblCostumes WHERE costumeID IN (SELECT costumeID FROM tblTags WHERE tagText = '#form.searchByTag#');
+</cfquery>
+
 <!--- View My Costumes query --->
 <cfquery name="qViewMyCostumes" datasource="cocdata">
-	SELECT * FROM tblCostumes WHERE userName = '#session.userName#';
+	SELECT * FROM tblCostumes WHERE userName = '#session.userGlobal#';
 </cfquery>
 
 <!--- Add a New Costume While Logged In --->
@@ -87,7 +93,10 @@ to do:
     
 	<cfif #session.isLoggedIn# eq "true">
     	<cfset form.costumeFile = REreplace(form.costumeFile,"\{\}\<\>\:\;\(\)\[\]","")>
+        <cfset form.costumeName = REreplace(form.costumeName,"\{\}\<\>\:\;\(\)\[\]","")>
+        <cfset form.costumeTags = REreplace(form.costumeTags,"\{\}\<\>\:\;\(\)\[\]","")>
         <!--- characters to remove: {}<>:;()[]  --->
+        <!--- a windows file cannot contain :<> --->
 											
 		<cftry>
 	        <cffile action="upload" fileField="costumeFile" destination="#ExpandPath('costumefiles')#" nameConflict="overwrite" accept="application/octet-stream">
@@ -127,7 +136,7 @@ to do:
            	<cftry>
 				<cfquery name="qAddCostume" datasource="cocdata">
 			    	INSERT INTO tblCostumes (userName, costumeFile, costumeImageFile, costumeGender, costumeName, costumeDescription, costumeRequirements)
-   				    VALUES ('#session.userName#','#form.costumeFile#','#costumeImageFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#','#costumeRequirements#')
+   				    VALUES ('#session.userGlobal#','#form.costumeFile#','#costumeImageFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#','#costumeRequirements#')
     			</cfquery>
 		    	<cfcatch><cfset message &= "One or more fields were not filled out.<br>"></cfcatch>
 			</cftry>
@@ -155,7 +164,9 @@ to do:
         <cfset form.bttnNewSubmitAnon = "">
     </cfif>
 
-  	<cfset form.costumeFile = REreplace(form.costumeFile,"\{\}\<\>\:\;\(\)\[\]","")> <!--- will this keep checking until all characters are removed? --->
+    <cfset form.costumeFile = REreplace(form.costumeFile,"\{\}\<\>\:\;\(\)\[\]","")>
+    <cfset form.costumeName = REreplace(form.costumeName,"\{\}\<\>\:\;\(\)\[\]","")>
+    <cfset form.costumeTags = REreplace(form.costumeTags,"\{\}\<\>\:\;\(\)\[\]","")>
     <!--- characters to remove: {}<>:;()[]  --->
     <!--- a windows file cannot contain :<> --->
    
@@ -197,7 +208,7 @@ to do:
 		<cftry>
 			<cfquery name="qAddCostumeAnon" datasource="cocdata">
 	    		INSERT INTO tblCostumes (userName, costumeFile, costumeGender, costumeName, costumeDescription, costumeRequirements)
-	   		    VALUES ('#session.userName#','#form.costumeFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#','#costumeRequirements#')
+	   		    VALUES ('#session.userGlobal#','#form.costumeFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#','#costumeRequirements#')
     		</cfquery>
 			<cfcatch>One or more fields were not filled out.</cfcatch>
     	</cftry>
@@ -296,10 +307,10 @@ to do:
 
 <body>
 	<div id="userInfo">
-    	<cfif #session.userName# eq "">
+    	<cfif #session.userGlobal# eq "">
         	<span class="left"><cfoutput>Welcome, Guest!</cfoutput></span>
         <cfelse>
-	    	<span class="left"><cfoutput>Welcome, #session.userName#!</cfoutput></span>
+	    	<span class="left"><cfoutput>Welcome, #session.userGlobal#!</cfoutput></span>
         </cfif>
         <span class="right"><cfoutput>#menuText#</cfoutput></span>
     </div>
@@ -353,7 +364,7 @@ to do:
                                     <input type="radio" name="costumeGender" value="huge" /> Huge
                                 </td>
                             </tr>
-            	   	        <tr><td>Costume Name</td><td><input type="text" name="costumeName" value="test" /></td></tr>
+            	   	        <tr><td>Costume Name</td><td><input type="text" name="costumeName" value="" /></td></tr>
                 	   		<tr><td valign="top">Description</td><td><textarea name="costumeDescription" rows="5" cols="50">test</textarea></td></tr>
                             <tr><td valign="top">Tags (separated by commas)</td><td><input type="text" name="costumeTags" size="50"></td></tr>
 		            		<cfif #session.isLoggedIn# eq "true"> <!--- is user logged in? --->
@@ -369,37 +380,55 @@ to do:
 
 <!--- search section--->
             <cfcase value="search">
-            	<cfif bttnSubmitSearch eq "">
+            	<cfif form.bttnSubmitSearchByName eq "" AND form.bttnSubmitSearchByTag eq "">
                 	<br>
-                	<fieldset >
+                	<fieldset>
 	            	<cfform name="" action="main.cfm?action=search" method="post">
 		            	Search by:<br>
-    		            Costume Name:<input type="text" name="searchByName"><br>
-        		        Tag: <input type="text" name="searchTag" size="20" maxlength="20"><input type="submit" value="Submit" name="bttnSubmitSearch">
+    		            Costume Name:<input type="text" name="searchByName"><input type="submit" value="Submit" name="bttnSubmitSearchByName"><br>
+        		        Tag: <input type="text" name="searchByTag" size="20" maxlength="20"><input type="submit" value="Submit" name="bttnSubmitSearchByTag">
 	                </cfform>
                     </fieldset>
                 <cfelse>
-                	<table>
-                    	<tr><td>ID</td><td>Username</td><td>file</td><td>Gender</td><td>Reqs</td><td>Name</td><td>Image</td></tr>
-                	<cfoutput query="qSearchByCostumeName">
-                    	<tr>
-                        	<td>#costumeID#</td><td>#userName#</td>
-                            <td><a href="#costumeFile#"><img src="file-image.PNG"></a></td>
-                            <td>#costumeGender#</td><td>#costumeRequirements#</td>
-                            <td>#costumeName#</td><td>IMage</td>
-                        </tr>
-                    </cfoutput>
-	                </table>
+                	<cfif form.bttnSubmitSearchByName eq "Submit">
+	                	<table>
+    	                	<tr><td>ID</td><td>Username</td><td>file</td><td>Gender</td><td>Reqs</td><td>Name</td><td>Image</td></tr>
+        	        		<cfoutput query="qSearchByCostumeName">
+            	        	<tr>
+                	        	<td>#costumeID#</td><td>#userName#</td>
+                    	        <td><a href="#costumeFile#"><img src="file-image.PNG"></a></td>
+                        	    <td>#costumeGender#</td><td>#costumeRequirements#</td>
+	                           	<td>#costumeName#</td><td>IMage</td>
+    	                    </tr>
+        	            	</cfoutput>
+	        	        </table>
+                    </cfif>
+                    <cfif form.bttnSubmitSearchByTag eq "Submit">
+                    	<table>
+    	                	<tr><td>ID</td><td>Username</td><td>file</td><td>Gender</td><td>Reqs</td><td>Name</td><td>Image</td></tr>
+        	        		<cfoutput query="qSearchByCostumeTags">
+            	        	<tr>
+                	        	<td>#costumeID#</td><td>#userName#</td>
+                    	        <td><a href="#costumeFile#"><img src="file-image.PNG"></a></td>
+                        	    <td>#costumeGender#</td><td>#costumeRequirements#</td>
+	                           	<td>#costumeName#</td><td>IMage</td>
+    	                    </tr>
+        	            	</cfoutput>
+	        	        </table>
+                    </cfif>
                 </cfif>
 	        </cfcase>
 
+<!--- style selection section --->
             <cfcase value="style">
             </cfcase>
+<!--- end style selection section --->
+            
 <!--- end search section --->
 
 <!--- logout section --->
 			<cfcase value="logout">
-            	<cfset session.userName = "">
+            	<cfset session.userGlobal = "">
                 <cfset session.isLoggedIn = "false">
                 <cflocation url="main.cfm">
             </cfcase>
