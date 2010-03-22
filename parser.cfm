@@ -1,4 +1,7 @@
-<cffile action="read" file="#form.costumeFile#" variable="cfContents">
+<cftry>
+	<cffile action="read" file="#form.costumeFile#" variable="cfContents">
+<cfcatch><cflocation url="main.cfm"></cfcatch>
+</cftry>
 
 <cfset costumeRequirements = "">
 

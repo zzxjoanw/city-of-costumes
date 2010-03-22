@@ -2,18 +2,18 @@
 to do:
 	now:
 		bring parser.cfm up to date for i16
+		(no new pieces in i17)
 		ensure that the filename checker is working properly (see line 156)
+		block database downloads
+		rename screenshots to match costume file names
 	someday:
 		implement css style selection
 		add forums
 --->
 
-
-
 <!--- variable defs --->
 <cfparam name="title" default="City of Costumes::Home">
 <cfparam name="message" default=""> <!--- various error messages --->
-<cfparam name="rootDir" default="c:/coldfusion8/wwwroot/portfolio_site/city-of-costumes">
 
 <cfparam name="url.action" default="">
 
@@ -36,9 +36,19 @@ to do:
 <cfparam name="form.bttnSubmitSearchByName" default=""> <!--- costume search form: search by name --->
 <cfparam name="form.bttnSubmitSearchByTag" default=""> <!--- costume search form: search by tag --->
 
-<cfset rootDir = GetBaseTemplatePath() />
-<cfset costumeFileDest = rootDir & ExpandPath('/costumefiles')>
-<cfset costumeImageFileDest = rootDir & ExpandPath('/costumeimagefiles')>
+<cfset costumeFileDest = ExpandPath('./costumefiles')>
+<cfset costumeImageDest = ExpandPath('./costumeimages')>
+
+<!--- set the menu --->
+<cfif #session.isLoggedIn# eq "true">
+	<cfif #session.userRights# eq "admin">
+    	<cfset menuText = "[ <a href='main.cfm?action=logout'>Logout</a> | <a href='main.cfm?action=new'>Add New Costume</a> | <a href='main.cfm?action=view'>View My Costumes</a> | <a href='main.cfm?action=search'>Search</a> | <a href='peppermint.cfm'>Admin</a>]">
+	<cfelse>
+		<cfset menuText = "[ <a href='main.cfm?action=logout'>Logout</a> | <a href='main.cfm?action=new'>Add New Costume</a> | <a href='main.cfm?action=view'>View My Costumes</a> | <a href='main.cfm?action=search'>Search</a> ]">
+	</cfif>
+<cfelse>
+	<cfset menuText = "[ <a href='main.cfm?action=register'>Register</a> | <a href='main.cfm?action=login'>Login</a> | <a href='main.cfm?action=new'>Add New Costume</a> | <a href='main.cfm?action=search'>Search</a> ]">
+</cfif>
 
 <!--- login form submitted --->
 <cfif #form.bttnLoginSubmit# eq "Submit">
@@ -84,112 +94,46 @@ to do:
 	SELECT * FROM tblCostumes WHERE userName = '#session.userGlobal#';
 </cfquery>
 
-<!--- Add a New Costume While Logged In --->
-<cfif #form.bttnNewSubmit# eq "Submit">
+<!--- Add a New Costume --->
+<cfif #form.bttnNewSubmit# eq "Submit" OR #form.bttnNewSubmitAnon# eq "Submit">
 	<cfset message = "">
-	<cfif #form.costumeFile# eq "" OR #form.costumeImageFile# eq "" OR #form.costumeGender# eq "" OR #form.costumeName# eq "" OR #form.costumeDescription# eq "">
-        <cfset form.bttnNewSubmit = "">
-    </cfif>
     
-	<cfif #session.isLoggedIn# eq "true">
-    	<cfset form.costumeFile = REreplace(form.costumeFile,"\{\}\<\>\:\;\(\)\[\]","")>
-        <cfset form.costumeName = REreplace(form.costumeName,"\{\}\<\>\:\;\(\)\[\]","")>
-        <cfset form.costumeTags = REreplace(form.costumeTags,"\{\}\<\>\:\;\(\)\[\]","")>
-        <!--- characters to remove: {}<>:;()[]  --->
-        <!--- a windows file cannot contain :<> --->
-											
-		<cftry>
-	        <cffile action="upload" fileField="costumeFile" destination="#ExpandPath('costumefiles')#" nameConflict="overwrite" accept="application/octet-stream">
-	        <cfcatch><cfset message &= "Costume file upload failed<br />"></cfcatch>
-        </cftry>
-        <cfif #cffile.serverExt# neq "costume">
-	    	<cfset fullPath = #ExpandPath('costumefiles')# & #cffile.serverFileName# & #cffile.serverFileExt#>
-    		<cffile action="delete" file="#fullPath#">
-	    </cfif>
-
-        <cftry>
-        	<cffile action="upload"
-            		filefield="costumeImageFile"
-                    destination="#ExpandPath('costumeimagefiles')#"
-                    nameconflict="makeunique"
-            		accept="image/jpeg,image/jpg,image/tga,image/x-tga,image/targa,image/x-targa">
-            <cfcatch><cfset message &= "Image upload failed<br />"></cfcatch>
-        </cftry>
-        <cfif #cffile.serverExt# neq "jpg" AND #cffile.serverExt# neq "jpeg" AND #cffile.serverExt# neq "tga">
-    		<cfset fullPath = #ExpandPath('costumeimagefiles')# & #cffile.serverFileName# & #cffile.serverFileExt#>
-    		<cffile action="delete" file="#fullPath#">
-	    </cfif>
-		
-        <cfif form.costumeGender eq "">
-        	<cfset message &= "no gender<br>">
-        </cfif>
-        <cfif form.costumeName eq "">
-        	<cfset message &= "no name<br>">
-        </cfif>
-        <cfif form.costumeDescription eq "">
-        	<cfset message &= "no desc<br>">
-        </cfif>
-        
-        <cfinclude template="parser.cfm"> <!--- separate file for easier maintenance --->
-
-    	<cftransaction>
-           	<cftry>
-				<cfquery name="qAddCostume" datasource="cocdata">
-			    	INSERT INTO tblCostumes (userName, costumeFile, costumeImageFile, costumeGender, costumeName, costumeDescription, costumeRequirements)
-   				    VALUES ('#session.userGlobal#','#form.costumeFile#','#costumeImageFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#','#costumeRequirements#')
-    			</cfquery>
-		    	<cfcatch><cfset message &= "One or more fields were not filled out.<br>"></cfcatch>
-			</cftry>
-            
-            <cfquery name="qGetLastRecordID" datasource="cocdata">
-            	SELECT @@IDENTITY AS newID; <!--- returns the last inserted primary key value --->
-            </cfquery>
-            
-            <cfif #form.costumeTags# neq ""> <!--- add tags to db --->
-				<cfset costumeTagsArray = ListToArray(form.costumeTags)>
-                <cfloop index="i" from="1" to="#ArrayLen(costumeTagsArray)#">
-	    			<cfquery name="qAddTag" datasource="cocdata">
-  		    			INSERT INTO tblTags (costumeID, tagText)
-	    	    	    VALUES ('#qGetLastRecordID.newID#','#costumeTagsArray[i]#')
-    			    </cfquery>
-                </cfloop>
-            </cfif>
-       	</cftransaction>
-    </cfif>
-
-<!--- Add a New Costume Anonymously --->
-<cfelseif #form.bttnNewSubmitAnon# eq "Submit">
-	<cfset message = "">
    	<cfif #form.costumeFile# eq "" OR #form.costumeImageFile# eq "" OR #form.costumeGender# eq "" OR #form.costumeName# eq "" OR #form.costumeDescription# eq "">
         <cfset form.bttnNewSubmitAnon = "">
-    </cfif>
+		<cfset form.bttnNewSubmit = "">
+	</cfif>
 
-    <cfset form.costumeFile = REreplace(form.costumeFile,"\{\}\<\>\:\;\(\)\[\]","")>
-    <cfset form.costumeName = REreplace(form.costumeName,"\{\}\<\>\:\;\(\)\[\]","")>
-    <cfset form.costumeTags = REreplace(form.costumeTags,"\{\}\<\>\:\;\(\)\[\]","")>
+	<cfloop condition="form.costumeFile contains '{' OR form.costumeFile contains '}' OR form.costumeFile contains '<' OR form.costumeFile contains '>'
+    			    OR form.costumeFile contains ':' OR form.costumeFile contains ';' OR form.costumeFile contains '(' OR form.costumeFile contains ')'
+                    OR form.costumeFile contains '[' OR form.costumeFile contains ']'">
+		<cfset form.costumeFile = REreplace(form.costumeFile,"[\{\}\<\>\:\;\(\)\[\]]","")>
+    </cfloop>
+
+	<cfloop condition="form.costumeName contains '{' OR form.costumeName contains '}' OR form.costumeName contains '<' OR form.costumeName contains '>'
+    			    OR form.costumeName contains ':' OR form.costumeName contains ';' OR form.costumeName contains '(' OR form.costumeName contains ')'
+                    OR form.costumeName contains '[' OR form.costumeName contains ']'">
+	    <cfset form.costumeName = REreplace(form.costumeName,"[\{\}\<\>\:\;\(\)\[\]]","")>
+    </cfloop>
+    
+   	<cfloop condition="form.costumeTags contains '{' OR form.costumeTags contains '}' OR form.costumeTags contains '<' OR form.costumeTags contains '>'
+    			    OR form.costumeTags contains ':' OR form.costumeTags contains ';' OR form.costumeTags contains '(' OR form.costumeTags contains ')'
+                    OR form.costumeTags contains '[' OR form.costumeTags contains ']'">
+	    <cfset form.costumeTags = REreplace(form.costumeTags,"[\{\}\<\>\:\;\(\)\[\]]","")>
+    </cfloop>
     <!--- characters to remove: {}<>:;()[]  --->
     <!--- a windows file cannot contain :<> --->
-   
-	<cftry>
-        <cffile action="upload" fileField="costumeFile" destination="#ExpandPath('costumefiles')#" nameConflict="overwrite" accept="application/octet-stream">
-        <cfcatch><cfset message &= "Costume file upload failed<br />"></cfcatch>
-    </cftry>
+
+    <cffile action="upload" fileField="costumeFile" destination="#costumeFileDest#" nameConflict="overwrite" accept="application/octet-stream">
+    <cfset costumeFile = "#cffile.serverFileName#.#serverFileExt#">
     <cfif #cffile.serverFileExt# neq "costume">
-    	<cfset fullPath = #ExpandPath('costumefiles\')# & #cffile.serverFileName# & "." & #cffile.serverFileExt#>
-    	<cffile action="delete" file="#fullPath#">
+    	<cffile action="delete" file="#costumeFileDest#/#cffile.serverFile#">
     </cfif>
-        
-    <cftry>
-       	<cffile action="upload"
-           		filefield="costumeImageFile"
-                destination="#ExpandPath('costumeimagefiles')#"
-                nameconflict="makeunique"
-          		accept="image/jpeg,image/jpg,image/tga,image/x-tga,image/targa,image/x-targa">
-        <cfcatch><cfset message &= "Image upload failed<br />"></cfcatch>
-    </cftry>
-    <cfif #cffile.serverFileExt# neq "jpg" AND #cffile.serverFileExt# neq "jpeg" AND #cffile.serverFileExt# neq "tga">
-  		<cfset fullPath = #ExpandPath('costumeimagefiles')# & #cffile.serverFileName# & #cffile.serverFileExt#>
-   		<cffile action="delete" file="#fullPath#">
+
+   	<cffile action="upload" filefield="costumeImageFile" destination="#costumeImageDest#" nameconflict="makeunique" accept="image/*">
+    <cfset imageFile = "#cffile.serverFileName#.#serverFileExt#">
+    <cfset cffile.serverFileExt = LCase(cffile.serverFileExt)>
+    <cfif #cffile.serverFileExt# neq "jpg" AND #cffile.serverFileExt# neq "jpeg" AND #cffile.serverFileExt# neq "tga" AND #cffile.serverFileExt# neq "gif">
+   		<cffile action="delete" file="#costumeImageDest#/#cffile.serverFile#">
     </cfif>
 
     <cfif form.costumeGender eq "">
@@ -201,21 +145,18 @@ to do:
     <cfif form.costumeDescription eq "">
        	<cfset message &= "no desc<br>">
     </cfif>
-    
+
     <cfinclude template="parser.cfm"> <!--- separate file for easier maintenance --->
 
 	<cftransaction>
-		<cftry>
-			<cfquery name="qAddCostumeAnon" datasource="cocdata">
-	    		INSERT INTO tblCostumes (userName, costumeFile, costumeGender, costumeName, costumeDescription, costumeRequirements)
-	   		    VALUES ('#session.userGlobal#','#form.costumeFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#','#costumeRequirements#')
-    		</cfquery>
-			<cfcatch>One or more fields were not filled out.</cfcatch>
-    	</cftry>
-    	
-    	<cfquery name="qGetLastRecordID" datasource="cocdata">
-    		SELECT @@IDENTITY AS newID; <!--- returns the last inserted primary key value --->
-	    </cfquery>
+		<cfquery name="qAddCostume" datasource="cocdata">
+		    INSERT INTO tblCostumes (userName, costumeFile, costumeImageFile, costumeGender, costumeName, costumeDescription, costumeRequirements)
+			VALUES ('#session.userGlobal#','./costumeFiles/#costumeFile#','./costumeImages/#imageFile#','#form.costumeGender#','#form.costumeName#','#form.costumeDescription#','#costumeRequirements#')
+   		</cfquery>
+
+        <cfquery name="qGetLastRecordID" datasource="cocdata">
+           	SELECT @@IDENTITY AS newID; <!--- returns the last inserted primary key value --->
+        </cfquery>
 
         <cfif #form.costumeTags# neq ""> <!--- add tags to db --->
 			<cfset costumeTagsArray = ListToArray(form.costumeTags)>
@@ -226,18 +167,7 @@ to do:
     		    </cfquery>
             </cfloop>
         </cfif>
-    </cftransaction>
-</cfif>
-
-<!--- set the menu --->
-<cfif #session.isLoggedIn# eq "true">
-	<cfif #session.userRights# eq "admin">
-    	<cfset menuText = "[ <a href='main.cfm?action=logout'>Logout</a> | <a href='main.cfm?action=new'>Add New Costume</a> | <a href='main.cfm?action=view'>View My Costumes</a> | <a href='main.cfm?action=search'>Search</a> | <a href='admin.cfm'>Admin</a>]">
-     <cfelse>
-		<cfset menuText = "[ <a href='main.cfm?action=logout'>Logout</a> | <a href='main.cfm?action=new'>Add New Costume</a> | <a href='main.cfm?action=view'>View My Costumes</a> | <a href='main.cfm?action=search'>Search</a> ]">
-	</cfif>        
-<cfelse>
-	<cfset menuText = "[ <a href='main.cfm?action=register'>Register</a> | <a href='main.cfm?action=login'>Login</a> | <a href='main.cfm?action=new'>Add New Costume</a> | <a href='main.cfm?action=search'>Search</a> ]">
+	</cftransaction>
 </cfif>
 
 <!--- set the title --->
@@ -398,7 +328,7 @@ to do:
                 	        	<td>#costumeID#</td><td>#userName#</td>
                     	        <td><a href="#costumeFile#"><img src="file-image.PNG"></a></td>
                         	    <td>#costumeGender#</td><td>#costumeRequirements#</td>
-	                           	<td>#costumeName#</td><td>IMage</td>
+	                           	<td>#costumeName#</td><td><a href="#costumeImageFile#"><img src="file-image.png"></td>
     	                    </tr>
         	            	</cfoutput>
 	        	        </table>
@@ -411,20 +341,19 @@ to do:
                 	        	<td>#costumeID#</td><td>#userName#</td>
                     	        <td><a href="#costumeFile#"><img src="file-image.PNG"></a></td>
                         	    <td>#costumeGender#</td><td>#costumeRequirements#</td>
-	                           	<td>#costumeName#</td><td>IMage</td>
+	                           	<td>#costumeName#</td><td><img src="#costumeImageFile#"></td>
     	                    </tr>
         	            	</cfoutput>
 	        	        </table>
                     </cfif>
                 </cfif>
 	        </cfcase>
+<!--- end search section --->
 
 <!--- style selection section --->
             <cfcase value="style">
             </cfcase>
 <!--- end style selection section --->
-            
-<!--- end search section --->
 
 <!--- logout section --->
 			<cfcase value="logout">
@@ -451,7 +380,7 @@ to do:
                    	ID: #qGetRandomCostumeByID.costumeID#<br>
                     Name: #qGetRandomCostumeByID.costumeName#<br />
                     Gender: #qGetRandomCostumeByID.costumeGender#<br>
-                    Image:<img src="#qGetRandomCostumeByID.costumeImageFile#"><br>
+                    Image:<img src="#qGetRandomCostumeByID.costumeImageFile#" width="400" height="300"><br>
                     File:<a href="#qGetRandomCostumeByID.costumeFile#"><img src="file-image.PNG" /></a><br>
                     Reqs:#qGetRandomCostumeByID.costumeRequirements#<br>
                 </cfoutput>
