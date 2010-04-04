@@ -1,2 +1,2 @@
-<cfapplication name="coc"
-   sessionmanagement="Yes">
+<cfapplication name="coc" sessionmanagement="Yes">
+<cfset code = "coc"> <!--- table prefix --->

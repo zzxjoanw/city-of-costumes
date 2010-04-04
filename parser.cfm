@@ -1,7 +1,22 @@
+<!---
+Elements to fix
+	Science booster (99)
+	Piston boots (163)
+--->
+
 <cftry>
 	<cffile action="read" file="#form.costumeFile#" variable="cfContents">
 <cfcatch><cflocation url="main.cfm"></cfcatch>
 </cftry>
+<cfset costumeGender = "">
+
+<cfif cfContents contains "CostumeFilePrefix Huge">
+	<cfset costumeGender = "Huge">
+<cfelseif cfContents contains "CostumeFilePrefix Fem">
+	<cfset costumeGender = "Female">
+<cfelse>
+	<cfset costumeGender = "Male">
+</cfif>
 
 <cfset costumeRequirements = "">
 
@@ -82,7 +97,7 @@
 
 <!--- booster packs --->
 <cfif cfContents contains "Doctor" OR
-      cfContents contains "Goggle" OR
+      cfContents contains "Goggle" OR <!--- needs to be more exact --->
 		 cfContents contains "Scien" OR
 		cfContents contains "Rubber" OR
 		cfContents contains "Lens_01">
@@ -122,7 +137,7 @@
 	<cfset costumeRequirements &= "Crafted a Bat Wings recipe<br>">
 </cfif>
 
-<cfif cfContents contains "bone">
+<cfif cfContents contains "Wing_V_Bone">
 	<cfset costumeRequirements &= "Crafted a Bone Wings recipe<br>">
 </cfif>
 
@@ -146,7 +161,7 @@
 	<cfset costumeRequirements &= "Crafted a Insect Wings recipe<br>">
 </cfif>
 
-<cfif cfContents contains "tech">
+<cfif cfContents contains "tech"> <!--- needs to be more exact --->
 	<cfset costumeRequirements &= "Crafted a Piston Boots recipe<br>">
 </cfif>
 
@@ -187,5 +202,9 @@
 	<cfset costumeRequirements &= "Earned the Apocalypse Survivor badge<br>">
 </cfif>
 <!--- end in-game unlockables --->
+
+<cfif costumeRequirements eq "">
+	<cfset costumeRequirements = "None">
+</cfif>
 
 

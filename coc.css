@@ -12,13 +12,29 @@ a:hover { font-weight:bold; }
 	height:75px;
 }
 
-#userInfo .left
+#userInfo .desc
 {
 	position:absolute;
 	left:15px;
 }
 
-#userInfo .right
+#userInfo .descMain
+{
+	font-size:large;
+}
+
+#userInfo .descSub
+{
+}
+
+#userInfo .welcome
+{
+	position:absolute;
+	left:15px;
+	top: 65px;
+}
+
+#userInfo .menu
 {
 	position:absolute;
 	right:15px;
