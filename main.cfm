@@ -1,22 +1,12 @@
 <!---
 to do:
 	now:
-		bring parser.cfm up to date for i16
-		(no new pieces in i17)
 		ensure that the filename checker is working properly (see line 156)
-		add a tag cloud to the search page
-		make image uploads optional
-		add default image
-	from VT:
-		WORKS DONE add description to start page so people know what they're looking at
-		WORKS DONE add a search-by-user function for regular users
-		WORKS DONE registration section: add a password confirmation field
-		WORKS DONE add a list of valid image formats
-		WORKS DONE search function should work on partial strings
-		DONE prevent image stretching
 	someday:
 		implement css style selection
 		add forums
+		add a tag cloud to the search page
+
 --->
 
 <!--- variable defs --->
@@ -99,19 +89,25 @@ to do:
 </cfif>
 
 <!--- Search by Name query --->
-<cfquery name="qSearchByCostumeName" datasource="cocdata">
-	SELECT * FROM #code#_tblCostumes WHERE costumeName LIKE '%#form.searchByName#%';
-</cfquery>
+<cfif form.bttnSubmitSearchByName eq "Submit">
+	<cfquery name="qSearchByCostumeName" datasource="cocdata">
+		SELECT * FROM #code#_tblCostumes WHERE costumeName LIKE '%#form.searchByName#%';
+	</cfquery>
+</cfif>
 
 <!--- Search by Tags query --->
-<cfquery name="qSearchByCostumeTags" datasource="cocdata">
-	SELECT * FROM #code#_tblCostumes WHERE costumeID IN (SELECT costumeID FROM #code#_tblTags WHERE tagText = '#form.searchByTag#');
-</cfquery>
+<cfif form.bttnSubmitSearchByTag eq "Submit">
+	<cfquery name="qSearchByCostumeTag" datasource="cocdata">
+		SELECT * FROM #code#_tblCostumes WHERE costumeID IN (SELECT costumeID FROM #code#_tblTags WHERE tagText = '#form.searchByTag#');
+	</cfquery>
+</cfif>
 
 <!--- Search by User query --->
-<cfquery name="qSearchByUser" datasource="cocdata">
-	SELECT * FROM #code#_tblCostumes WHERE userName LIKE '%#form.searchByUser#%';
-</cfquery>
+<cfif form.bttnSubmitSearchByUser eq "Submit">
+	<cfquery name="qSearchByUser" datasource="cocdata">
+		SELECT * FROM #code#_tblCostumes WHERE userName LIKE '%#form.searchByUser#%';
+	</cfquery>
+</cfif>
 
 <!--- View My Costumes query --->
 <cfquery name="qViewMyCostumes" datasource="cocdata">
@@ -129,12 +125,9 @@ to do:
         <cfabort>
 	</cfif>
 
-	<cfset #form.costumeFile# = REReplace(#form.costumeFile#,"[^[:alpha:][:digit:]._-]","","ALL")> <!--- the ^ searches for any characters other than those listed --->
-	<cfset #form.costumeTags# = REReplace(#form.costumeTags#,"[^[:alpha:][:digit:]._-,]","","ALL")> <!--- ALL finds every instance of the specified search string --->
-	<cfset #form.costumeImageFile# = REReplace(#form.costumeImageFile#,"[^[:alpha:][:digit:]._-]","","ALL")>
-
-    <cffile action="upload" fileField="costumeFile" destination="#costumeFileDest#" nameConflict="makeunique">
-    <cfset costumeFilenameFull = "#cffile.serverFileName#.#serverFileExt#">
+	<!--- check the costume file --->
+    <cffile action="upload" fileField="form.costumeFile" destination="#costumeFileDest#" nameConflict="makeunique">
+	<cfset costumeFileExt = "#cffile.serverFileExt#">
     <cfset costumeFilename = "#cffile.serverFileName#">
     
     <cfif #cffile.serverFileExt# neq "costume">
@@ -142,23 +135,22 @@ to do:
         That is not a costume file.
         <cfabort>
     </cfif>
+    
 
    	<cffile action="upload" filefield="costumeImageFile" destination="#costumeImageDest#" nameconflict="makeunique" accept="image/*">
     <cfset cffile.serverFileExt = LCase(cffile.serverFileExt)>
-   	<cfif #cffile.serverFileExt# neq "jpg" AND #cffile.serverFileExt# neq "jpeg" AND #cffile.serverFileExt# neq "tga" AND #cffile.serverFileExt# neq "gif">
-		<cffile action="delete" file="#costumeImageDest#/#cffile.serverFile#">
+    <cfset imageFileExt = "#cffile.serverFileExt#">
+    <cfset imageFilename = "#cffile.serverFileName#">
+    
+   	<cfif #imageFileExt# neq "jpg" AND #imageFileExt# neq "jpeg" AND #imageFileExt# neq "tga" AND #imageFileExt# neq "gif">
+		<cffile action="delete" file="#costumeImageDest#/#imageFilename#.#imageFileExt#">
         That is not an image file.
         <cfabort>
     </cfif>
     
-    <cffile action="rename" source="#costumeImageDest#/#cffile.serverFile#" destination="#costumeImageDest#/#costumeFilename#.#cffile.serverFileExt#">
-    <cfset imageFile = "#costumeFilename#.#cffile.serverFileExt#">
 
     <cfif #form.costumeName# eq "">
-   	   	<cfset message &= "no name<br>">
-    </cfif>
-   	<cfif form.costumeDescription eq "">
-   		<cfset message &= "no desc<br>">
+   	   	<cfset message &= "Enter a costume name.<br>">
     </cfif>
 
     <cfinclude template="parser.cfm"> <!--- separate file for easier maintenance --->
@@ -166,7 +158,7 @@ to do:
 	<cftransaction>
 		<cfquery name="qAddCostume" datasource="cocdata">
 		    INSERT INTO #code#_tblCostumes (userName, costumeFile, costumeImageFile, costumeGender, costumeName, costumeDescription, costumeRequirements)
-			VALUES ('#session.userGlobal#','./costumeFiles/#costumeFilenameFull#','./costumeImages/#imageFile#','#costumeGender#','##form.costumeName##','#form.costumeDescription#','#costumeRequirements#')
+			VALUES ('#session.userGlobal#','./costumeFiles/#costumeFilename#.#costumeFileExt#','./costumeImages/#imageFilename#.#imageFileExt#','#costumeGender#','#form.costumeName#','#form.costumeDescription#','#costumeRequirements#')
    		</cfquery>
 
 	    <cfquery name="qGetLastRecordID" datasource="cocdata">
@@ -333,50 +325,44 @@ to do:
                     </fieldset>
                 <cfelse>
                 	<cfif form.bttnSubmitSearchByName eq "Submit">
-                    	<cfset sourceImage = #qSearchByCostumeName.costumeImageFile#>
-                        <cfset sourceFile = #qSearchByCostumeName.costumeFile#>
-                        <cfset queryName = "qSearchByCostumeName">
+                    	<cfset queryName = "qSearchByCostumeName">
                     <cfelseif form.bttnSubmitSearchByTag eq "Submit">
-                    	<cfset sourceImage = #qSearchByTags.costumeImageFile#>
-                        <cfset sourceFile = #qSearchByTags.costumeFile#>
-                        <cfset queryName = "qSearchByTags">
+                    	<cfset queryName = "qSearchByCostumeTag">
                     <cfelse>
-                    	<cfset sourceImage = #qSearchByUser.costumeImageFile#>
-                        <cfset sourceFile = #qSearchByUser.costumeFile#>
-                        <cfset queryName = "qSearchByUser">
+                    	<cfset queryName = "qSearchByUser">
                     </cfif>
                     
-					<cfimage action="info" source="#sourceImage#" structname="imageInfo">
-       	            <cfset width = #imageInfo.width#>
-           	        <cfset height = #imageInfo.height#>
+                	<table>
+		               	<tr><td>ID</td><td>Username</td><td>file</td><td>Gender</td><td>Reqs</td><td>Name</td><td>Image</td></tr>
+	       	        	<cfoutput query="#queryName#">                
+							<cfimage action="info" source="#costumeImageFile#" structname="imageInfo">
+    		   	            <cfset width = #imageInfo.width#>
+        		   	        <cfset height = #imageInfo.height#>
                     
-	            	<cfif width gt 400><!--- if width is 500 --->
-               			<cfset widthPercentScale = 400/#width#> <!--- wps = 0.8 --->
-            		</cfif>
+	        		    	<cfif width gt 400><!--- if width is 500 --->
+               					<cfset widthPercentScale = 400/#width#> <!--- wps = 0.8 --->
+            				</cfif>
 
-				    <cfif height gt 300> <!--- if width is 400 --->
-       			    	<cfset heightPercentScale = 300/#height#> <!--- hps = 0.75 --->
-		        	</cfif>
+						    <cfif height gt 300> <!--- if width is 400 --->
+    		   			    	<cfset heightPercentScale = 300/#height#> <!--- hps = 0.75 --->
+				        	</cfif>
                 
-		            <cfif widthPercentScale gt heightPercentScale>
-	           			<cfset width = #width# * #widthPercentScale#>
-       					<cfset height = #height# * #widthPercentScale#>
-       				<cfelse>
-       		       		<cfset width = #width# * #heightPercentScale#>
-		               	<cfset height = #height# * #heightPercentScale#>
-		            </cfif>
+				            <cfif widthPercentScale gt heightPercentScale>
+		        	   			<cfset width = #width# * #widthPercentScale#>
+       							<cfset height = #height# * #widthPercentScale#>
+       						<cfelse>
+	       		    	   		<cfset width = #width# * #heightPercentScale#>
+			            	   	<cfset height = #height# * #heightPercentScale#>
+				            </cfif>
 
-                	<table width="100%">
-   	                	<tr><td>ID</td><td>Username</td><td>file</td><td>Gender</td><td>Reqs</td><td>Name</td><td>Image</td></tr>
-       	        		<cfoutput query="#queryName#">
-        	        	<tr>
-               	        	<td>#costumeID#</td><td>#userName#</td>
-                   	        <td><a href="#sourceFile#"><img src="images/file-image.PNG"></a></td>
-                       	    <td>#costumeGender#</td>
-                            <td><b>Costume Requirements:</b><br>#costumeRequirements#</td>
-                           	<td>#costumeName#</td>
-                            <td><a href="#sourceImage#"><img src="#sourceImage#" height="#height#" width="#width#"></a></td>
-   	                    </tr>
+	        	        	<tr>
+    	           	        	<td>#costumeID#</td><td>#userName#</td>
+        	           	        <td><a href="#costumeFile#"><img src="images/file-image.PNG"></a></td>
+            	           	    <td>#costumeGender#</td>
+                	            <td><b>Costume Requirements:</b><br>#costumeRequirements#</td>
+                    	       	<td>#costumeName#</td>
+                        	    <td><a href="#costumeImageFile#"><img src="#costumeImageFile#" height="#height#" width="#width#"></a></td>
+	   	                    </tr>
        	            	</cfoutput>
         	        </table>
                 </cfif>
@@ -418,12 +404,12 @@ to do:
 		               	<cfset height = #height# * #heightPercentScale#>
 		            </cfif>
                    	<table style="border:1px black solid;">
-                       	<tr><td colspan="5"><img src="#costumeImageFile#" width="400" height="300"/></td></tr>
+                       	<tr><td colspan="5"><img src="#costumeImageFile#" width="#width#" height="#height#"/></td></tr>
    	                	<tr>
                         	<td>#costumeName#</td>
                             <td>#costumeGender#</td>
                             <td>#costumeRequirements#</td>
-                            <td><a href="#costumeFile#"><img src="images/file-image.PNG" height="#height#" width="#width#"></a></td>
+                            <td><a href="#costumeFile#"><img src="images/file-image.PNG"></a></td>
                         </tr>
 					</table>
    	            </cfoutput>
